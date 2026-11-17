@@ -1,0 +1,30 @@
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_license//rules:license.bzl", "license")
+
+package(
+    default_applicable_licenses = [":license"],
+    default_visibility = ["//visibility:public"],
+)
+
+license(
+    name = "license",
+    license_kinds = ["@rules_license//licenses/spdx:MIT"],
+    license_text = "LICENSE",
+)
+
+exports_files(["LICENSE"])
+
+# Header-only parallel pattern-defeating quicksort (C++20).
+#
+# Uses its own std::thread pool. The OpenMP backend (upstream option
+# PPQSORT_USE_OPENMP, or compiling with -fopenmp so _OPENMP is defined) is not
+# wired up: this module provides no OpenMP runtime.
+cc_library(
+    name = "ppqsort",
+    hdrs = ["include/ppqsort.h"] + glob(["include/ppqsort/**/*.h"]),
+    includes = ["include"],
+    linkopts = select({
+        "@platforms//os:linux": ["-lpthread"],
+        "//conditions:default": [],
+    }),
+)

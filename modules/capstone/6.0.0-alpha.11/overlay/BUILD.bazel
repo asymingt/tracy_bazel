@@ -1,0 +1,91 @@
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_license//rules:license.bzl", "license")
+
+package(
+    default_applicable_licenses = [":license"],
+    default_visibility = ["//visibility:public"],
+)
+
+# Capstone itself is BSD-3-Clause; the per-architecture decoders derived from
+# LLVM carry the LLVM release license (University of Illinois/NCSA), see
+# LICENSES/LICENSE_LLVM.TXT.
+license(
+    name = "license",
+    license_kinds = [
+        "@rules_license//licenses/spdx:BSD-3-Clause",
+        "@rules_license//licenses/spdx:NCSA",
+    ],
+    license_text = "LICENSES/LICENSE.TXT",
+)
+
+exports_files(glob(["LICENSES/*"]))
+
+# Every architecture upstream supports (CMake's CAPSTONE_ARCHITECTURE_DEFAULT
+# ON). Each maps to arch/<dir>/ and the CAPSTONE_HAS_<define> switch.
+_ARCHS = {
+    "AArch64": "AARCH64",
+    "ARC": "ARC",
+    "ARM": "ARM",
+    "Alpha": "ALPHA",
+    "BPF": "BPF",
+    "EVM": "EVM",
+    "HPPA": "HPPA",
+    "LoongArch": "LOONGARCH",
+    "M680X": "M680X",
+    "M68K": "M68K",
+    "MOS65XX": "MOS65XX",
+    "Mips": "MIPS",
+    "PowerPC": "POWERPC",
+    "RISCV": "RISCV",
+    "SH": "SH",
+    "Sparc": "SPARC",
+    "SystemZ": "SYSTEMZ",
+    "TMS320C64x": "TMS320C64X",
+    "TriCore": "TRICORE",
+    "WASM": "WASM",
+    "X86": "X86",
+    "XCore": "XCORE",
+    "Xtensa": "XTENSA",
+}
+
+# Static Capstone disassembly engine, all architectures, AT&T x86 syntax
+# included. Headers are reachable both as <capstone/capstone.h> and, like
+# upstream's pkg-config file (Cflags: -I${includedir} -I${includedir}/capstone),
+# as <capstone.h>.
+cc_library(
+    name = "capstone",
+    srcs = glob([
+        "*.c",
+        "*.h",
+    ]) + glob(
+        [
+            "arch/%s/*.%s" % (arch, ext)
+            for arch in _ARCHS
+            for ext in [
+                "c",
+                "h",
+                "inc",
+            ]
+        ],
+        # Not every architecture has every file type (e.g. BPF has no .inc).
+        allow_empty = True,
+    ),
+    hdrs = glob(["include/capstone/*.h"]),
+    # Upstream sets C_STANDARD 99 (gnu99 with CMake's default extensions). The
+    # sources rely on stdbool's `true`/`false` being macros that expand to 1/0
+    # during token pasting, which no longer holds under C23 (GCC 15's default).
+    conlyopts = select({
+        "@rules_cc//cc/compiler:msvc-cl": [],
+        "@rules_cc//cc/compiler:clang-cl": [],
+        "//conditions:default": ["-std=gnu99"],
+    }),
+    includes = [
+        "include",
+        "include/capstone",
+    ],
+    local_defines = [
+        # Use malloc/calloc/realloc/free/vsnprintf by default (cs_opt_mem can
+        # still override them at run time), as CMake's CAPSTONE_USE_DEFAULT_ALLOC.
+        "CAPSTONE_USE_SYS_DYN_MEM",
+    ] + ["CAPSTONE_HAS_" + define for define in _ARCHS.values()],
+)

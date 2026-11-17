@@ -53,11 +53,15 @@ register_toolchains(
 # BCR modules
 
 bazel_dep(name = "bazel_skylib", version = "1.9.2")
+bazel_dep(name = "nlohmann_json", version = "3.12.0.bcr.2")
 bazel_dep(name = "platforms", version = "1.1.0")
 bazel_dep(name = "rules_cc", version = "0.2.26")
 bazel_dep(name = "rules_license", version = "1.0.0")
 bazel_dep(name = "with_cfg.bzl", version = "1.1.0", dev_dependency = True)
+bazel_dep(name = "zstd", version = "1.5.7.bcr.3")
 
 # Local modules (served from the local registry under modules/, see .bazelrc)
 
+bazel_dep(name = "capstone", version = "6.0.0-alpha.11")
+bazel_dep(name = "ppqsort", version = "1.0.6")
 bazel_dep(name = "tracy", version = "0.15.0")

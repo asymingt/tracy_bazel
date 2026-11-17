@@ -1,0 +1,64 @@
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
+load("//tests/client:defs.bzl", "tracy_manual_lifetime_cc_test")
+
+_TOOLS = [
+    "tracy-capture",
+    "tracy-capture-daemon",
+    "tracy-csvexport",
+    "tracy-import-chrome",
+    "tracy-import-fuchsia",
+    "tracy-update",
+    "tracy-merge",
+]
+
+cc_library(
+    name = "process",
+    hdrs = ["process.h"],
+)
+
+cc_test(
+    name = "tool_smoke_test",
+    srcs = ["tool_smoke_test.cc"],
+    args = ["$(rlocationpath @tracy//:%s)" % tool for tool in _TOOLS],
+    data = ["@tracy//:" + tool for tool in _TOOLS],
+    deps = [
+        ":process",
+        "@rules_cc//cc/runfiles",
+    ],
+)
+
+# Linux-only, so a separate target rather than an entry in _TOOLS.
+cc_test(
+    name = "monitor_smoke_test",
+    srcs = ["tool_smoke_test.cc"],
+    args = ["$(rlocationpath @tracy//:tracy-monitor)"],
+    data = ["@tracy//:tracy-monitor"],
+    target_compatible_with = ["@platforms//os:linux"],
+    deps = [
+        ":process",
+        "@rules_cc//cc/runfiles",
+    ],
+)
+
+_E2E_TOOLS = [
+    "tracy-capture",
+    "tracy-csvexport",
+    "tracy-update",
+    "tracy-merge",
+    "tracy-import-chrome",
+]
+
+# Built with TRACY_ENABLE + TRACY_MANUAL_LIFETIME (+ only_localhost,
+# no_broadcast), so the test can pick its port before starting the profiler.
+tracy_manual_lifetime_cc_test(
+    name = "e2e_test",
+    srcs = ["e2e_test.cc"],
+    args = ["$(rlocationpath @tracy//:%s)" % tool for tool in _E2E_TOOLS],
+    data = ["@tracy//:" + tool for tool in _E2E_TOOLS],
+    deps = [
+        ":process",
+        "@rules_cc//cc/runfiles",
+        "@tracy//:client",
+    ],
+)

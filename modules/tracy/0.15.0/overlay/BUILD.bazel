@@ -1,3 +1,5 @@
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
+load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_cc//cc:cc_shared_library.bzl", "cc_shared_library")
 load("@rules_license//rules:license.bzl", "license")
@@ -76,16 +78,26 @@ _CLIENT_LINKOPTS = select({
     "//conditions:default": [],
 })
 
+# The public/ tree without any //config defines. Used by :headers and by
+# tracy-monitor, which builds its own client with a fixed configuration.
+cc_library(
+    name = "public_sources",
+    hdrs = _PUBLIC_HDRS,
+    defines = _CLIENT_DEFINES,
+    includes = ["public"],
+    textual_hdrs = _TEXTUAL_HDRS + ["public/TracyClient.cpp"],
+    visibility = ["//visibility:private"],
+)
+
 # Header-only view of the API with the configured defines. Lets a library be
 # instrumented without linking the client; the final binary must still link
 # exactly one of :client or :client_dynamic (+ :client_shared).
 cc_library(
     name = "headers",
-    hdrs = _PUBLIC_HDRS,
-    defines = _CLIENT_DEFINES,
-    includes = ["public"],
-    textual_hdrs = _TEXTUAL_HDRS,
-    deps = ["//config"],
+    deps = [
+        ":public_sources",
+        "//config",
+    ],
 )
 
 # Static client: link into the one binary (or shared object) that owns the
@@ -128,4 +140,254 @@ cc_shared_library(
         "//conditions:default": "libTracyClient.so",
     }),
     deps = [":client_dynamic"],
+)
+
+# ---------------------------------------------------------------------------
+# Server (trace processing) and command-line tools
+# ---------------------------------------------------------------------------
+#
+# Upstream builds every tool as its own CMake project, each compiling its own
+# copy of TracyServer (cmake/server.cmake) with NO_STATISTICS chosen per tool.
+# Here there are two server variants, and each tool uses the one upstream does:
+#
+#   :server                -- statistics on:  csvexport, merge (and the GUI)
+#   :server_no_statistics  -- statistics off: capture, capture-daemon, import-*,
+#                             update, monitor
+#
+# Upstream's -march=native/-mcpu=native (cmake/config.cmake) is deliberately
+# not used: it is not hermetic and is wrong when cross-compiling.
+
+_CXX20 = select({
+    "@rules_cc//cc/compiler:msvc-cl": ["/std:c++20"],
+    "@rules_cc//cc/compiler:clang-cl": ["/std:c++20"],
+    "//conditions:default": ["-std=c++20"],
+})
+
+_TOOL_DEFINES = select({
+    "@platforms//os:windows": [
+        "NOMINMAX",
+        "WIN32_LEAN_AND_MEAN",
+        "WINVER=0x0A00",
+        "_WIN32_WINNT=0x0A00",
+        "_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR",
+    ],
+    "//conditions:default": [],
+})
+
+_TOOL_LINKOPTS = select({
+    "@platforms//os:linux": ["-lpthread"],
+    "@platforms//os:windows": [
+        "-lws2_32",
+        "-lsecur32",
+        "-ladvapi32",
+    ],
+    "//conditions:default": [],
+})
+
+# Sources shared by the server and the client (TRACY_COMMON_SOURCES).
+cc_library(
+    name = "common",
+    srcs = [
+        "public/common/TracySocket.cpp",
+        "public/common/TracyStackFrames.cpp",
+        "public/common/TracySystem.cpp",
+        "public/common/tracy_lz4.cpp",
+        "public/common/tracy_lz4hc.cpp",
+    ],
+    hdrs = glob([
+        "public/common/*.h",
+        "public/common/*.hpp",
+    ]),
+    copts = _CXX20,
+    includes = ["public/common"],
+    linkopts = _TOOL_LINKOPTS,
+    local_defines = _TOOL_DEFINES,
+    # tracy_lz4hc.cpp #includes tracy_lz4.cpp.
+    textual_hdrs = ["public/common/tracy_lz4.cpp"],
+    visibility = ["//visibility:private"],
+)
+
+[
+    cc_library(
+        name = name,
+        srcs = glob(["server/*.cpp"]),
+        hdrs = glob([
+            "server/*.h",
+            "server/*.hpp",
+        ]),
+        copts = _CXX20,
+        # Changes struct layouts in the server headers, so it must reach every
+        # translation unit that includes them.
+        defines = defines,
+        includes = ["server"],
+        local_defines = _TOOL_DEFINES,
+        deps = [
+            ":common",
+            "@capstone",
+            "@ppqsort",
+            "@zstd",
+        ],
+    )
+    for name, defines in [
+        ("server", []),
+        ("server_no_statistics", ["TRACY_NO_STATISTICS"]),
+    ]
+]
+
+# Upstream generates this with `git log`; a release tarball has no git
+# metadata, so use the module version instead.
+write_file(
+    name = "git_ref_hpp",
+    out = "git_ref/GitRef.hpp",
+    content = [
+        "#pragma once",
+        'namespace tracy { static inline const char* GitRef = "v%s"; }' % module_version(),
+        "",
+    ],
+    visibility = ["//visibility:private"],
+)
+
+cc_library(
+    name = "git_ref",
+    hdrs = [":git_ref_hpp"],
+    includes = ["git_ref"],
+    visibility = ["//visibility:private"],
+)
+
+cc_library(
+    name = "getopt",
+    srcs = ["getopt/getopt.c"],
+    hdrs = ["getopt/getopt.h"],
+    visibility = ["//visibility:private"],
+)
+
+cc_library(
+    name = "dtl",
+    hdrs = glob(["dtl/**/*.hpp"]),
+    includes = ["dtl"],
+    visibility = ["//visibility:private"],
+)
+
+# cmake/util.cmake (TracyUtil), used by the capture tools.
+cc_library(
+    name = "util",
+    srcs = [
+        "util/CaptureConsole.cpp",
+        "util/CaptureFileBackup.cpp",
+        "util/CaptureOutput.cpp",
+    ],
+    hdrs = glob(["util/*.hpp"]),
+    copts = _CXX20,
+    includes = ["util"],
+    local_defines = _TOOL_DEFINES,
+    visibility = ["//visibility:private"],
+    deps = [":server_no_statistics"],
+)
+
+_TOOLS = {
+    # name: (srcs, deps)
+    "tracy-capture": (
+        ["capture/src/capture.cpp"],
+        [
+            ":getopt",
+            ":server_no_statistics",
+            ":util",
+        ],
+    ),
+    "tracy-capture-daemon": (
+        ["capture/src/capturedaemon.cpp"],
+        [
+            ":getopt",
+            ":server_no_statistics",
+            ":util",
+        ],
+    ),
+    "tracy-csvexport": (
+        ["csvexport/src/csvexport.cpp"],
+        [
+            ":getopt",
+            ":server",
+        ],
+    ),
+    "tracy-import-chrome": (
+        ["import/src/import-chrome.cpp"],
+        [
+            ":server_no_statistics",
+            "@nlohmann_json//:json",
+        ],
+    ),
+    "tracy-import-fuchsia": (
+        ["import/src/import-fuchsia.cpp"],
+        [":server_no_statistics"],
+    ),
+    "tracy-update": (
+        glob(["update/src/*"]),
+        [
+            ":getopt",
+            ":server_no_statistics",
+        ],
+    ),
+    "tracy-merge": (
+        ["merge/src/merge.cpp"],
+        [
+            ":getopt",
+            ":server",
+        ],
+    ),
+}
+
+[
+    cc_binary(
+        name = name,
+        srcs = srcs,
+        copts = _CXX20,
+        linkopts = select({
+            "@platforms//os:windows": ["-ldbghelp"],
+            "//conditions:default": [],
+        }) if name == "tracy-update" else [],
+        local_defines = _TOOL_DEFINES,
+        deps = deps + [":git_ref"],
+    )
+    for name, (srcs, deps) in _TOOLS.items()
+]
+
+# Short aliases: @tracy//:capture, @tracy//:csvexport, ...
+[
+    alias(
+        name = name.removeprefix("tracy-"),
+        actual = ":" + name,
+    )
+    for name in _TOOLS.keys() + ["tracy-monitor"]
+]
+
+# Linux-only perf-event sampling monitor. Like upstream, it compiles its own
+# client (TracyClient.cpp) with a fixed configuration, independent of the
+# //config build settings.
+cc_binary(
+    name = "tracy-monitor",
+    srcs = [
+        "monitor/src/monitor.cpp",
+        "public/TracyClient.cpp",
+    ],
+    copts = _CXX20,
+    linkopts = [
+        "-lpthread",
+        "-ldl",
+    ],
+    local_defines = [
+        "TRACY_ENABLE",
+        "TRACY_MANUAL_LIFETIME",
+        "TRACY_NO_FRAME_IMAGE",
+    ],
+    target_compatible_with = select({
+        "@platforms//cpu:aarch64": ["@platforms//os:linux"],
+        "@platforms//cpu:x86_64": ["@platforms//os:linux"],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":git_ref",
+        ":public_sources",
+        ":server_no_statistics",
+        ":util",
+    ],
 )

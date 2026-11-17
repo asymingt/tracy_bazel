@@ -86,3 +86,62 @@ upstream CI does for this toolchain.
 - The Windows end-to-end test needs Winsock loopback without firewall
   prompts on hosted runners; fall back to `tags = ["no-windows-ci"]` if it
   is flaky.
+
+## 7. As built (2026-11-17)
+
+Where the implementation differs from the plan above, and why:
+
+- **`capstone` is version `6.0.0-alpha.11`**, not `6.0.0-Alpha11`. Bazel
+  compares dot-separated pre-release identifiers numerically, so `alpha.11`
+  correctly sorts after `alpha.9`; `alpha11` would sort *before* `alpha9`.
+  `compatibility_level = 6` follows the major version, because Capstone 6
+  renamed the AArch64 API relative to 5.
+  - All architectures are built, and all of them are compiled into a single
+    `cc_library`.
+  - Headers are exported as both `<capstone/capstone.h>` and `<capstone.h>`,
+    as upstream's pkg-config file does.
+  - The sources are compiled with `-std=gnu99`, as upstream pins. Under C23
+    (GCC 15's default) `true`/`false` stop being macros and capstone's token
+    pasting breaks.
+- **`ppqsort` 1.0.6 carries two patches.**
+  - `counting_semaphore.patch` is Tracy's fix for a real assertion failure.
+  - `no_execution_header.patch` drops an unused `#include <execution>`. With
+    libstdc++ that header enables the TBB backend whenever `<tbb/tbb.h>` is
+    installed on the host, which then fails to link.
+  - Tracy's `ppqsort-nodebug.patch` is **not** needed. The debug macros it
+    disables are never used, and `<syncstream>` compiles with both libc++
+    and libstdc++.
+- **Two server variants instead of a `no_statistics` flag.** Upstream decides
+  per tool, so `:server` (statistics on) is used by csvexport and merge, and
+  `:server_no_statistics` by capture, capture-daemon, import-*, update and
+  monitor. A global flag would have been wrong for half the tools.
+- **An 8th tool, `tracy-monitor`.** It is new upstream and Linux-only. It
+  compiles its own client (`TracyClient.cpp`) with fixed defines, so it uses a
+  new private `:public_sources` target that carries no `//config` defines.
+  `:headers` is now `:public_sources` plus `//config`.
+- **Tool targets carry the upstream names** (`@tracy//:tracy-capture`, ...),
+  so the output binaries are named correctly, with short aliases
+  (`@tracy//:capture`, ...).
+- **The tests are C++, not shell**, so they also run on the native Windows
+  jobs:
+  - `tests/tools/process.h`: popen/`_popen` helpers;
+  - `tool_smoke_test` and `monitor_smoke_test`: banner + exit code;
+  - `e2e_test`.
+
+  The end-to-end test is a single process. It is an instrumented binary
+  (manual lifetime, so it can pick a random port via `TRACY_PORT` before
+  starting the profiler) that runs `tracy-capture` against itself on
+  `127.0.0.1`. It then checks the trace with `tracy-csvexport` and
+  round-trips it through `tracy-update -z 3` and `tracy-merge`. It also
+  imports a two-event Chrome trace with `tracy-import-chrome`.
+- **`TRACY_NO_INVARIANT_CHECK=1` in every enabled test's environment**
+  (`tests/client/defs.bzl`). Phase 1 CI showed that GitHub's `macos-15-intel`
+  runner is a VM without an invariant TSC, where Tracy refuses to start by
+  design.
+
+Verified locally on a linux-amd64 host:
+- all 13 tests pass natively;
+- `--config=tracy` builds for `linux_arm64_gnu.2.34`, `macos_arm64`,
+  `macos_amd64`, `windows_amd64` and `windows_arm64`;
+- an external workspace that uses only the registry and the host's default
+  toolchain (GCC 15 + libstdc++) builds the client and all 8 tools.

@@ -1,0 +1,14 @@
+{
+    "integrity": "sha256-EtnAU2P6PTb0kWp48cfiN3SN/hEe9EuLenyg8+2tRNo=",
+    "strip_prefix": "PPQSort-1.0.6",
+    "url": "https://github.com/GabTux/PPQSort/archive/refs/tags/v1.0.6.tar.gz",
+    "overlay": {
+        "BUILD.bazel": "sha256-bkyJ7n8zyNPOA74GbZVmVdEhGRZkNzi3USNbA7PNBJc=",
+        "MODULE.bazel": "sha256-h600+8o42qZP9s+IqgK2fUaVRYSBLx82JCwqcYiqGQ0="
+    },
+    "patches": {
+        "counting_semaphore.patch": "sha256-FHIdlSw2EYPWEXhmPIcggmsfg9oZDt3HbeVeqEEJU60=",
+        "no_execution_header.patch": "sha256-ddf/le2bVm1WHNSkhbaoGFfrn4ef31i8MXBepLim41Q="
+    },
+    "patch_strip": 1
+}

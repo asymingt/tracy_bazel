@@ -4,7 +4,8 @@ This repository is a **staging area for a Bazel module that builds the
 [Tracy](https://github.com/wolfpld/tracy) frame profiler (v0.15.0) from
 source**, together with the dependency modules it needs that are not yet in
 the [Bazel Central Registry](https://registry.bazel.build). It holds a local
-Bazel registry (`bazel_registry.json` + `modules/`), consumer-style tests, and
+Bazel registry (`bazel_registry.json` + `modules/`) with `tracy`, `capstone`
+6.0.0-alpha.11 and `ppqsort` 1.0.6, consumer-style tests, and
 CI that builds everything natively and cross-compiles it for every
 {Linux, macOS, Windows} × {amd64, arm64} pair with a hermetic LLVM toolchain.
 
@@ -22,7 +23,7 @@ plan and phasing are in [`design/`](design/OVERVIEW.md).
 | Phase | Scope | State |
 | --- | --- | --- |
 | [1](design/PHASE1.md) | Workspace + instrumentation client (`@tracy//:client`) | done |
-| [2](design/PHASE2.md) | Server library + CLI tools (`tracy-capture`, `tracy-csvexport`, ...) | planned |
+| [2](design/PHASE2.md) | Server library + CLI tools (`tracy-capture`, `tracy-csvexport`, ...) | done |
 | [3](design/PHASE3.md) | GUI dependency modules | planned |
 | [4](design/PHASE4.md) | GUI profiler (`tracy-profiler`) | planned |
 | [5](design/PHASE5.md) | Hardening + BCR upstreaming | planned |
@@ -90,6 +91,28 @@ bazel run //:app --@tracy//config:enable --@tracy//config:on_demand --@tracy//co
 | `@tracy//:client_dynamic` + `@tracy//:client_shared` | Shared client. Depend on `:client_dynamic` and add `dynamic_deps = ["@tracy//:client_shared"]` to every `cc_binary`, `cc_test` and `cc_shared_library` that uses Tracy, so the whole process shares one profiler instance. Never mix with `:client`. |
 | `@tracy//:headers` | The API and configuration only, so a library can be instrumented without choosing a client. The final link still needs one of the above. |
 
+### Command-line tools
+
+| Target | Upstream tool |
+| --- | --- |
+| `@tracy//:tracy-capture` | Connect to a running client and record a trace to a `.tracy` file |
+| `@tracy//:tracy-capture-daemon` | Record traces from every client that appears on the network |
+| `@tracy//:tracy-csvexport` | Export zone statistics, frames or messages as CSV |
+| `@tracy//:tracy-import-chrome` | Convert a Chrome/Perfetto JSON trace |
+| `@tracy//:tracy-import-fuchsia` | Convert a Fuchsia trace |
+| `@tracy//:tracy-update` | Upgrade, recompress, strip, or symbolize a trace |
+| `@tracy//:tracy-merge` | Merge several traces into one |
+| `@tracy//:tracy-monitor` | Linux only: sample a process that was not built with Tracy (perf events) |
+
+Each also has a short alias (`@tracy//:capture`, `@tracy//:csvexport`, ...).
+For example, to record the instrumented app above in CI:
+
+```
+bazel run @tracy//:tracy-capture -- -o /tmp/app.tracy -a 127.0.0.1 -s 10 &
+bazel run //:app --@tracy//config:enable
+bazel run @tracy//:tracy-csvexport -- /tmp/app.tracy
+```
+
 ### Build settings (`--@tracy//config:<name>`)
 
 Each upstream CMake option `TRACY_<NAME>` is the flag `<name>`, with the
@@ -133,6 +156,11 @@ by default, which lld's `-l<name>` lookup does not find. Give Windows DLLs an
 explicit `shared_lib_name` (see `tests/client/BUILD.bazel`).
 `@tracy//:client_shared` already does this.
 
+On x86, Tracy refuses to start when the CPU does not report an invariant TSC,
+which is common on virtual machines (including GitHub's `macos-15-intel`
+runners). Set `TRACY_NO_INVARIANT_CHECK=1` in the environment there, or build
+with `--@tracy//config:timer_fallback`.
+
 The `tracy` module carries one patch,
 `modules/tracy/0.15.0/patches/mingw_arm64_cntvct.patch`. It lets the client
 compile for Windows/arm64 with MinGW, where `_ReadStatusReg` and
@@ -151,5 +179,7 @@ bazel shutdown
 
 ## Licensing
 
-Tracy is BSD-3-Clause, and so is its bundled libbacktrace. Both are declared
-with `@rules_license` `license()` targets in the module.
+Tracy is BSD-3-Clause, and so is its bundled libbacktrace. Capstone is
+BSD-3-Clause, plus the LLVM (University of Illinois/NCSA) license for its
+LLVM-derived decoders. PPQSort is MIT. Every module declares its licenses with
+`@rules_license` `license()` targets.

@@ -15,6 +15,13 @@ tasks:
     build_targets:
       - "@tracy//:client"
       - "@tracy//:client_shared"
+      - "@tracy//:tracy-capture"
+      - "@tracy//:tracy-capture-daemon"
+      - "@tracy//:tracy-csvexport"
+      - "@tracy//:tracy-import-chrome"
+      - "@tracy//:tracy-import-fuchsia"
+      - "@tracy//:tracy-update"
+      - "@tracy//:tracy-merge"
   verify_targets_enabled:
     name: Verify build targets (TRACY_ENABLE)
     platform: ${{ platform }}
