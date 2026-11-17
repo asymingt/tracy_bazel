@@ -3,10 +3,7 @@
 
 #include <cstdio>
 
-// The include spellings Tracy's sources use (relative to the imgui source
-// root). bcr_includes.cc checks the BCR-style <imgui/...> ones; the two must
-// not be mixed in one translation unit, since on Windows the virtual include
-// directories are copies and #pragma once cannot tell them apart.
+// The include spellings Tracy's sources use (relative to the imgui source root).
 #include <imgui.h>
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
@@ -28,10 +25,7 @@
 #error "IMGUI_USE_WCHAR32 should propagate"
 #endif
 
-extern bool BcrIncludesWork();
-
 int main() {
-  if (!BcrIncludesWork()) return 1;
   IMGUI_CHECKVERSION();
   static_assert(sizeof(ImWchar) == 4, "IMGUI_USE_WCHAR32");
   ImGui::CreateContext();

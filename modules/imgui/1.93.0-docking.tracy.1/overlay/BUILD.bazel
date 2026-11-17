@@ -9,8 +9,12 @@
 #   imgui-phantom-column.patch  imgui_tables.cpp fix (ocornut/imgui#9519).
 #   imgui-emscripten.patch      imconfig.h, Emscripten only.
 #
-# Target names and include layout match the BCR imgui module (<imgui.h> and
-# <imgui/imgui.h>), but only the backends Tracy uses are provided.
+# Target names match the BCR imgui module, but only the backends Tracy uses are
+# provided, and headers are included relative to the imgui source root only
+# (<imgui.h>, <backends/imgui_impl_glfw.h>, <misc/freetype/imgui_freetype.h>),
+# as Tracy does. There is deliberately no include_prefix = "imgui": on Windows
+# Bazel's virtual include directories are copies, so <imgui/imgui.h> and the
+# "imgui.h" the backends include would be two different files to #pragma once.
 
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_license//rules:license.bzl", "license")
@@ -58,7 +62,6 @@ cc_library(
         "IMGUI_ENABLE_FREETYPE",
         "IMGUI_USE_WCHAR32",
     ],
-    include_prefix = "imgui",
     includes = ["."],
     linkopts = select({
         # imgui-macos-clipboard.patch: IMGUI_ENABLE_OSX_DEFAULT_CLIPBOARD_FUNCTIONS

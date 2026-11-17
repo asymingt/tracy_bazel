@@ -205,6 +205,22 @@ jobs:
         shell: bash
         run: bazel test $PLATFORM_FLAG //...
 
+      # tracy-profiler under headless display servers (tests/profiler). The
+      # binary links Wayland/xkbcommon statically but loads EGL/GL (glvnd +
+      # Mesa) and, for the GLFW/X11 backend, libX11 & co. from the host at run
+      # time, as any GL application does.
+      - name: Headless profiler tests (Linux)
+        id: headless
+        if: inputs.test && runner.os == 'Linux'
+        shell: bash
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            weston xvfb libegl1 libegl-mesa0 libgl1 libglx-mesa0 libgl1-mesa-dri \
+            libx11-6 libx11-xcb1 libxcursor1 libxrandr2 libxi6 libxinerama1 libxkbcommon0
+          bazel test $PLATFORM_FLAG --test_output=all \
+            //tests/profiler:headless_wayland_test //tests/profiler:headless_x11_test
+
       - name: Force bazel shutdown to enable cache sync
         if: always()
         shell: bash
@@ -263,7 +279,7 @@ jobs:
           echo "Kept $KEEP_KEY; deleted $count superseded entries on $GITHUB_REF"
 
       - name: Upload test logs on failure
-        if: failure() && steps.test.outcome == 'failure'
+        if: failure() && (steps.test.outcome == 'failure' || steps.headless.outcome == 'failure')
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: testlogs-${{ inputs.host }}-bazel${{ inputs.stage }}

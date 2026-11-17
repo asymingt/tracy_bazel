@@ -26,7 +26,7 @@ plan and phasing are in [`design/`](design/OVERVIEW.md).
 | [1](design/PHASE1.md) | Workspace + instrumentation client (`@tracy//:client`) | done |
 | [2](design/PHASE2.md) | Server library + CLI tools (`tracy-capture`, `tracy-csvexport`, ...) | done |
 | [3](design/PHASE3.md) | GUI dependency modules | done |
-| [4](design/PHASE4.md) | GUI profiler (`tracy-profiler`) | planned |
+| [4](design/PHASE4.md) | GUI profiler (`tracy-profiler`) | done |
 | [5](design/PHASE5.md) | Hardening + BCR upstreaming | planned |
 
 Latest `main` build, by host (rows) and target (columns), on Bazel 9.x and on
@@ -114,6 +114,18 @@ bazel run //:app --@tracy//config:enable
 bazel run @tracy//:tracy-csvexport -- /tmp/app.tracy
 ```
 
+### The profiler GUI
+
+```
+bazel run @tracy//:tracy-profiler                                         # Wayland on Linux
+bazel run @tracy//:tracy-profiler --@tracy//config:linux_backend=x11      # GLFW/X11 on Linux
+```
+
+macOS and Windows use GLFW. `--@tracy//config:no_fileselector` drops the
+native file dialog, and `--@tracy//config:self_profile` instruments the
+profiler itself. GL (and on Linux the compositor or X server) comes from the
+host at run time, as for any GL application.
+
 ### Build settings (`--@tracy//config:<name>`)
 
 Each upstream CMake option `TRACY_<NAME>` is the flag `<name>`, with the
@@ -144,7 +156,7 @@ Not provided, because they need libraries this module does not package:
 
 | Module | Version | Used by | Notes |
 | --- | --- | --- | --- |
-| `tracy` | 0.15.0 | | client, server, CLI tools (GUI in Phase 4) |
+| `tracy` | 0.15.0 | | client, server, CLI tools, GUI |
 | `capstone` | 6.0.0-alpha.11 | server | all architectures |
 | `ppqsort` | 1.0.6 | server | 2 patches |
 | `imgui` | 1.93.0-docking.tracy.1 | GUI | Tracy's six patches; GLFW + OpenGL3 backends |

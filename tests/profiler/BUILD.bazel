@@ -1,0 +1,39 @@
+load("@bazel_skylib//rules:build_test.bzl", "build_test")
+load(":defs.bzl", "wayland_sh_test", "x11_sh_test")
+
+# Builds in every matrix cell (including the non-default configurations).
+build_test(
+    name = "profiler_build_test",
+    targets = ["@tracy//:tracy-profiler"],
+)
+
+# Start the GUI under a headless display server. Need weston / Xvfb and Mesa
+# on the host, so they are `manual` and run explicitly by Linux CI.
+_HEADLESS_TAGS = [
+    "local",
+    "manual",
+]
+
+wayland_sh_test(
+    name = "headless_wayland_test",
+    srcs = ["run_headless.sh"],
+    args = [
+        "$(rootpath @tracy//:tracy-profiler)",
+        "wayland",
+    ],
+    data = ["@tracy//:tracy-profiler"],
+    tags = _HEADLESS_TAGS,
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+x11_sh_test(
+    name = "headless_x11_test",
+    srcs = ["run_headless.sh"],
+    args = [
+        "$(rootpath @tracy//:tracy-profiler)",
+        "x11",
+    ],
+    data = ["@tracy//:tracy-profiler"],
+    tags = _HEADLESS_TAGS,
+    target_compatible_with = ["@platforms//os:linux"],
+)

@@ -1,0 +1,96 @@
+# Builds the modules the way a BCR consumer (and BCR presubmit) would: a fresh
+# workspace that only adds this checkout as a registry ahead of the BCR, uses
+# the host's default C++ toolchain (GCC / Apple clang / MSVC) and none of this
+# repository's .bazelrc flags or overrides.
+name: Consumer
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**.md"
+      - "design/**"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  consumer:
+    name: consumer ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-24.04, macos-15, windows-2025]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 240
+    env:
+      USE_BAZEL_VERSION: "9.x"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: registry
+
+      - name: Set up Bazel
+        uses: bazel-contrib/setup-bazel@104e3eea9447cdaa4b00d0fb46191a3985d26ab3 # 0.19.1
+        with:
+          bazelisk-cache: true
+          disk-cache: consumer-${{ matrix.runner }}
+          repository-cache: true
+
+      # No system packages are installed on purpose: every dependency, including
+      # the Wayland/X11/GL headers the GUI needs, must come from modules.
+      - name: Create consumer workspace
+        shell: bash
+        run: |
+          mkdir consumer && cd consumer
+          registry="$(cd ../registry && pwd)"
+          if command -v cygpath >/dev/null; then registry="/$(cygpath -m "$registry")"; fi
+          cat > .bazelrc <<EOF
+          common --registry=file://$registry/
+          common --registry=https://bcr.bazel.build
+          common --enable_platform_specific_config
+          # The MSVC toolchain defaults to C++14; Tracy's client needs C++17
+          # (its own targets set C++20 where needed).
+          build:windows --cxxopt=/std:c++17 --host_cxxopt=/std:c++17
+          EOF
+          cat > MODULE.bazel <<'EOF'
+          module(name = "consumer")
+          bazel_dep(name = "rules_cc", version = "0.2.26")
+          bazel_dep(name = "tracy", version = "0.15.0")
+          EOF
+          cat > BUILD.bazel <<'EOF'
+          load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
+          cc_binary(name = "app", srcs = ["main.cc"], deps = ["@tracy//:client"])
+          EOF
+          cat > main.cc <<'EOF'
+          #include <tracy/Tracy.hpp>
+          int main() { ZoneScoped; FrameMark; return 0; }
+          EOF
+
+      - name: Build client and app
+        shell: bash
+        working-directory: consumer
+        run: |
+          bazel build //:app @tracy//:client @tracy//:client_shared
+          bazel build --@tracy//config:enable //:app @tracy//:client
+
+      - name: Build CLI tools
+        shell: bash
+        working-directory: consumer
+        run: |
+          bazel build @tracy//:tracy-capture @tracy//:tracy-csvexport \
+            @tracy//:tracy-import-chrome @tracy//:tracy-import-fuchsia \
+            @tracy//:tracy-update @tracy//:tracy-merge @tracy//:tracy-capture-daemon
+
+      - name: Build profiler GUI
+        shell: bash
+        working-directory: consumer
+        run: bazel build @tracy//:tracy-profiler
