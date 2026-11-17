@@ -19,7 +19,10 @@ cc_library(
 [
     rule(
         name = name,
-        srcs = ["enabled_test.cc"],
+        srcs = [
+            "enabled_test.cc",
+            "ssp_handler.c",
+        ],
         env = {"TRACY_NO_INVARIANT_CHECK": "1"},
         deps = [
             ":c_api",

@@ -66,8 +66,12 @@ jobs:
       - name: Run variants
         shell: bash
         run: |
-          bazel test //tests/bisect/... --runs_per_test=30 --keep_going \
+          bazel test //tests/bisect:baseline --runs_per_test=40 --keep_going \
+            --copt=-g --strip=never \
             --test_output=summary --test_summary=detailed || true
+          mkdir -p diag
+          cp "$(bazel cquery //tests/bisect:baseline --copt=-g --strip=never --output=files 2>/dev/null | grep '\.exe$' | head -1)" diag/ || true
+          find -L bazel-out -path '*tests/bisect/baseline_/baseline.exe' -exec cp {} diag/ \; 2>/dev/null || true
 
       - name: Summarise
         if: always()
@@ -86,5 +90,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: bisect-${{ matrix.host }}
-          path: bazel-testlogs/tests/bisect/**/test.log
+          path: |
+            bazel-testlogs/tests/bisect/**/test.log
+            diag/
           if-no-files-found: ignore
