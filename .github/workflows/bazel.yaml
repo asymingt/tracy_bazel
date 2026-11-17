@@ -203,7 +203,18 @@ jobs:
         id: test
         if: inputs.test
         shell: bash
-        run: bazel test $PLATFORM_FLAG //...
+        # Bazel last_rc on Windows sometimes cannot delete a leftover
+        # bazel-out/_tmp/actions/stderr-* from the preceding build and fails
+        # with exit code 36 (local environment error) before running anything.
+        # Restarting the server releases the handle; retry once in that case.
+        run: |
+          rc=0; bazel test $PLATFORM_FLAG //... || rc=$?
+          if [ "$rc" = 36 ] && [ "$RUNNER_OS" = Windows ]; then
+            echo "::warning::bazel test exited 36; restarting the server and retrying"
+            bazel shutdown
+            rc=0; bazel test $PLATFORM_FLAG //... || rc=$?
+          fi
+          exit "$rc"
 
       # tracy-profiler under headless display servers (tests/profiler). The
       # binary links Wayland/xkbcommon statically but loads EGL/GL (glvnd +

@@ -73,6 +73,7 @@ should go to the BCR as fixes to the respective modules:
 | `ppqsort` | `no_execution_header.patch` | to send (unused include pulls in TBB) |
 | `nativefiledialog-extended` | `xdg_foreign_v2.patch` | Tracy's; to send to btzy/nativefiledialog-extended |
 | `usearch` | `lowercase_windows_h.patch` | to send |
+| `usearch` | `remove_version_file.patch` | BCR-only (the root `VERSION` file shadows `<version>` under MSVC, which is case-insensitive and has no `-iquote`) |
 | `imgui` | Tracy's six `imgui-*.patch` | phantom-column = ocornut/imgui#9519 (open); the rest are Tracy configuration |
 
 ### F3. `imgui` 1.93.0-docking.tracy.1 is Tracy-specific
