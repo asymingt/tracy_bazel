@@ -1,0 +1,9 @@
+{
+    "integrity": "sha256-PSCK1NF2/QXigOafdf+iVCs6CxGnOuT0l+Xqs4ukZrA=",
+    "strip_prefix": "md4c-60e8065cfccd5d7ac561115f9a9bfbdf811f5cc9",
+    "url": "https://github.com/mity/md4c/archive/60e8065cfccd5d7ac561115f9a9bfbdf811f5cc9.tar.gz",
+    "overlay": {
+        "BUILD.bazel": "sha256-XuvkEgoaBqyp9T9WqPX8+Mx8LD3J2FuyudA7TuAn+WU=",
+        "MODULE.bazel": "sha256-HqBEzHklwKsxhLDqlfv1bcXLAzn+vntwx04dQHvlM6M="
+    }
+}

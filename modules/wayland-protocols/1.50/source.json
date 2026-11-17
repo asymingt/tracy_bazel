@@ -1,0 +1,10 @@
+{
+    "integrity": "sha256-RGDCDPz2i5lKXuIG7RX8Ga0xLxbJYHUYboOw4/SqSKU=",
+    "strip_prefix": "wayland-protocols-1.50",
+    "url": "https://gitlab.freedesktop.org/wayland/wayland-protocols/-/releases/1.50/downloads/wayland-protocols-1.50.tar.xz",
+    "overlay": {
+        "BUILD.bazel": "sha256-9PlLddZHfGgwVBIK3ggkie/qd3HBhhqHkJ4x8bVGX1o=",
+        "MODULE.bazel": "sha256-2zx34V0kImfNeuRzoPOP1LlKEYScVJNltBVwMcXlcOQ=",
+        "wayland_protocol.bzl": "sha256-rXt9jx2R0IKqX6GBs27aY0ZCSPtCV/gq/j3V9DchLCc="
+    }
+}

@@ -10,26 +10,8 @@ module(
 # a host x target matrix that is already proven. Patches Tracy turns out not
 # to need are pruned in Phase 5 (design/PHASE5.md).
 
-bazel_dep(name = "llvm", version = "0.8.25")
-single_version_override(
-    module_name = "llvm",
-    patch_strip = 1,
-    patches = [
-        "//patches:llvm/header_search_paths.patch",
-        "//patches:llvm/msan_libcxx.patch",
-        "//patches:llvm/sanitizer_runtime_libunwind.patch",
-        "//patches:llvm/sanitizer_strip_foreign_source_paths.patch",
-        "//patches:llvm/windows_compiler_param_file.patch",
-        "//patches:llvm/windows_pkg_dir_symlinks.patch",
-        "//patches:llvm/runtime_library_search_directories_dedup.patch",
-        "//patches:llvm/mingw_def_extra_tokens.patch",
-        "//patches:llvm/osx_cryptex_frameworks.patch",
-        # New in this workspace (not in qt_bazel_workspace): stops the static
-        # Windows libc++abi from re-exporting its symbols from every DLL.
-        "//patches:llvm/windows_static_libcxxabi_no_exports.patch",
-    ],
-    version = "0.8.25",
-)
+bazel_dep(name = "llvm", version = "0.8.27")
+
 
 # Backends built into the from-source `@llvm-project` overlay (used for
 # `--@llvm//toolchain:bootstrap_stage=stage1_from_source`). Mirrors the CPUs we
@@ -50,6 +32,50 @@ register_toolchains(
     dev_dependency = True,
 )
 
+# macOS SDK frameworks extracted into the hermetic sysroot (the default one is
+# minimal). Covers GLFW's Cocoa backend (Carbon, Cocoa, IOKit, ...), imgui's
+# clipboard (ApplicationServices) and the headers their umbrella frameworks
+# import. Phase 4 adds what the profiler and its dependencies need.
+osx = use_extension("@llvm//extensions:osx.bzl", "osx")
+osx.frameworks(
+    names = [
+        "AppKit",
+        "ApplicationServices",
+        "CFNetwork",
+        "Carbon",
+        "CloudKit",
+        "Cocoa",
+        "ColorSync",
+        "CoreData",
+        "CoreFoundation",
+        "CoreGraphics",
+        "CoreImage",
+        "CoreLocation",
+        "CoreServices",
+        "CoreText",
+        "CoreVideo",
+        "DiskArbitration",
+        "Foundation",
+        "IOKit",
+        "IOSurface",
+        "ImageIO",
+        "Kernel",
+        "Metal",
+        "Network",
+        "OSLog",
+        "OpenGL",
+        # Carbon -> ApplicationServices -> PrintCore includes <cups/ppd.h>; the
+        # osx extension only extracts usr/include/cups when PrintCore is listed.
+        "PrintCore",
+        "QuartzCore",
+        "Security",
+        "Symbols",
+        "SystemConfiguration",
+        "UniformTypeIdentifiers",
+        "_LocationEssentials",
+    ],
+)
+
 # BCR modules
 
 bazel_dep(name = "bazel_skylib", version = "1.9.2")
@@ -58,10 +84,28 @@ bazel_dep(name = "platforms", version = "1.1.0")
 bazel_dep(name = "rules_cc", version = "0.2.26")
 bazel_dep(name = "rules_license", version = "1.0.0")
 bazel_dep(name = "with_cfg.bzl", version = "1.1.0", dev_dependency = True)
+
+# Not direct dependencies (glfw/wayland -> libexpat, xkbcommon/... ->
+# rules_cc_autoconf), but pinned as in qt_bazel_workspace: wayland-scanner and
+# autoconf checks are built for the execution platform, which is Windows when
+# cross-compiling a Linux target from a Windows host, and older versions do
+# not build there (no Windows branch in libexpat < 2.8.3's config header;
+# rules_cc_autoconf < 0.27.0's config checker uses std::ifstream(std::wstring)).
+bazel_dep(name = "libexpat", version = "2.8.3")
+bazel_dep(name = "rules_cc_autoconf", version = "0.27.0")
 bazel_dep(name = "zstd", version = "1.5.7.bcr.3")
 
 # Local modules (served from the local registry under modules/, see .bazelrc)
 
+bazel_dep(name = "base64", version = "0.5.2")
 bazel_dep(name = "capstone", version = "6.0.0-alpha.11")
+bazel_dep(name = "dbus", version = "1.16.2")
+bazel_dep(name = "imgui", version = "1.93.0-docking.tracy.1")
+bazel_dep(name = "libglvnd", version = "1.7.0")
+bazel_dep(name = "md4c", version = "0.6.0.20261013")
+bazel_dep(name = "nativefiledialog-extended", version = "1.4.1")
 bazel_dep(name = "ppqsort", version = "1.0.6")
+bazel_dep(name = "tidy-html5", version = "5.8.0")
 bazel_dep(name = "tracy", version = "0.15.0")
+bazel_dep(name = "usearch", version = "2.26.4")
+bazel_dep(name = "wayland-protocols", version = "1.50")

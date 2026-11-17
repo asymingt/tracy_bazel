@@ -1,0 +1,10 @@
+{
+    "integrity": "sha256-cjoPn0z0TPeel7zDFeyPheUusQTIiClCw/L7qVrMCA0=",
+    "strip_prefix": "base64-0.5.2",
+    "url": "https://github.com/aklomp/base64/archive/refs/tags/v0.5.2.tar.gz",
+    "overlay": {
+        "BUILD.bazel": "sha256-1Z1c5Z3s05iSxcb59m+QuGRdah0KeUSZGIqBBApjnuU=",
+        "MODULE.bazel": "sha256-UIP/MCtM04mBJ6kMhbTn6Mi+zsNwyesY3D16okibdVY=",
+        "config/config.h": "sha256-7uvhxdH0npI2hg4VdXFkY7qomRiHuhr+Rw2RUB7R25o="
+    }
+}

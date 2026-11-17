@@ -1,0 +1,13 @@
+{
+    "integrity": "sha256-UFudNANHt8tMrliAwfMgDaTlojf+FsPdeFXCl3iYlFU=",
+    "strip_prefix": "USearch-2.26.4",
+    "url": "https://github.com/unum-cloud/usearch/archive/refs/tags/v2.26.4.tar.gz",
+    "overlay": {
+        "BUILD.bazel": "sha256-bjZv2fFGmLnzRt9PIT8YDgCkl1mQHvxCprGER3h1xSY=",
+        "MODULE.bazel": "sha256-nv6DvUchKnu9GC9XxZXqgHUQm+21zTWOkp3HH5U+xB0="
+    },
+    "patches": {
+        "lowercase_windows_h.patch": "sha256-+ZEURooTfnzZOgpd8ExNs6tWMsydGld0U32BfFgJB1Q="
+    },
+    "patch_strip": 1
+}

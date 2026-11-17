@@ -1,0 +1,80 @@
+# Dear ImGui v1.93.0-docking, configured and patched exactly as Tracy 0.15.0
+# builds it (Tracy's cmake/vendor.cmake and cmake/imgui-*.patch):
+#
+#   imgui-loader.patch          glCompressedTexImage2D in the OpenGL3 loader;
+#                               Tracy's own code calls it through that header.
+#   imgui-no-samplers.patch     OpenGL3 backend never binds sampler objects.
+#   imgui-no-default-font.patch imconfig.h: IMGUI_DISABLE_DEFAULT_FONT.
+#   imgui-macos-clipboard.patch imconfig.h: native macOS clipboard.
+#   imgui-phantom-column.patch  imgui_tables.cpp fix (ocornut/imgui#9519).
+#   imgui-emscripten.patch      imconfig.h, Emscripten only.
+#
+# Target names and include layout match the BCR imgui module (<imgui.h> and
+# <imgui/imgui.h>), but only the backends Tracy uses are provided.
+
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_license//rules:license.bzl", "license")
+
+package(
+    default_applicable_licenses = [":license"],
+    default_visibility = ["//visibility:public"],
+)
+
+license(
+    name = "license",
+    license_kinds = ["@rules_license//licenses/spdx:MIT"],
+    license_text = "LICENSE.txt",
+)
+
+exports_files(["LICENSE.txt"])
+
+config_setting(
+    name = "opt",
+    values = {"compilation_mode": "opt"},
+)
+
+cc_library(
+    name = "imgui",
+    srcs = [
+        "imgui.cpp",
+        "imgui_demo.cpp",
+        "imgui_draw.cpp",
+        "imgui_tables.cpp",
+        "imgui_widgets.cpp",
+        "imstb_rectpack.h",
+        "imstb_textedit.h",
+        "imstb_truetype.h",
+        "misc/cpp/imgui_stdlib.cpp",
+        "misc/freetype/imgui_freetype.cpp",
+    ],
+    hdrs = [
+        "imconfig.h",
+        "imgui.h",
+        "imgui_internal.h",
+        "misc/cpp/imgui_stdlib.h",
+        "misc/freetype/imgui_freetype.h",
+    ],
+    defines = [
+        "IMGUI_ENABLE_FREETYPE",
+        "IMGUI_USE_WCHAR32",
+    ],
+    include_prefix = "imgui",
+    includes = ["."],
+    linkopts = select({
+        # imgui-macos-clipboard.patch: IMGUI_ENABLE_OSX_DEFAULT_CLIPBOARD_FUNCTIONS
+        "@platforms//os:macos": [
+            "-framework",
+            "ApplicationServices",
+        ],
+        "//conditions:default": [],
+    }),
+    # Upstream Tracy strips these from non-Debug builds.
+    local_defines = select({
+        ":opt": [
+            "IMGUI_DISABLE_DEBUG_TOOLS",
+            "IMGUI_DISABLE_DEMO_WINDOWS",
+        ],
+        "//conditions:default": [],
+    }),
+    deps = ["@freetype"],
+)

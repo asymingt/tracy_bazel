@@ -1,3 +1,0 @@
-# Patches applied to third-party Bazel modules via single_version_override in
-# the root MODULE.bazel, grouped by the module they apply to.
-exports_files(glob(["*/*.patch"]))

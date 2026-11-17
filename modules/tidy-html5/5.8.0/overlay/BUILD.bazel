@@ -1,0 +1,75 @@
+# HTML Tidy library (libtidy), static, <tidy.h> / <tidybuffio.h>.
+#
+# Configured like upstream's default CMake build of the library: all
+# localizations, no console application, no runtime configuration files.
+
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_license//rules:license.bzl", "license")
+
+package(
+    default_applicable_licenses = [":license"],
+    default_visibility = ["//visibility:public"],
+)
+
+license(
+    name = "license",
+    license_kinds = ["@rules_license//licenses/spdx:HTMLTIDY"],
+    license_text = "README/LICENSE.md",
+)
+
+exports_files(["README/LICENSE.md"])
+
+_SRCS = [
+    "access.c",
+    "alloc.c",
+    "attrdict.c",
+    "attrs.c",
+    "buffio.c",
+    "charsets.c",
+    "clean.c",
+    "config.c",
+    "entities.c",
+    "fileio.c",
+    "gdoc.c",
+    "istack.c",
+    "language.c",
+    "lexer.c",
+    "mappedio.c",
+    "message.c",
+    "messageobj.c",
+    "parser.c",
+    "pprint.c",
+    "sprtf.c",
+    "streamio.c",
+    "tagask.c",
+    "tags.c",
+    "tidylib.c",
+    "tmbstr.c",
+    "utf8.c",
+]
+
+cc_library(
+    name = "tidy",
+    srcs = ["src/" + f for f in _SRCS] + glob(["src/*.h"]),
+    hdrs = [
+        "include/tidy.h",
+        "include/tidybuffio.h",
+        "include/tidyenum.h",
+        "include/tidyplatform.h",
+    ],
+    includes = ["include"],
+    local_defines = [
+        'LIBTIDY_VERSION=\\"5.8.0\\"',
+        'RELEASE_DATE=\\"2021/07/10\\"',
+        "SUPPORT_LOCALIZATIONS=1",
+        "SUPPORT_CONSOLE_APP=0",
+        "HAVE_CONFIG_H",
+    ] + select({
+        "@platforms//os:windows": [
+            "NOMINMAX",
+            "_USE_MATH_DEFINES",
+            "_CRT_SECURE_NO_WARNINGS",
+        ],
+        "//conditions:default": [],
+    }),
+)
