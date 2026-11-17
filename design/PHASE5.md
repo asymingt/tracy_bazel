@@ -1,0 +1,62 @@
+# Phase 5: Hardening and upstreaming
+
+Parent: [OVERVIEW](OVERVIEW.md).
+
+## 1. Objective
+
+Make every module in `modules/` ready for the BCR, and leave the
+workspace in a maintainable state, using what the Qt workspace learned in
+`design/REVIEW.md`.
+
+## 2. Work items
+
+1. **`design/REVIEW.md` pass**, using the Qt checklist:
+   - no canonical repo names;
+   - no reliance on root-only overrides;
+   - every transitive label backed by a direct `bazel_dep`;
+   - `license_text` paths exist;
+   - `presubmit.yml` targets build outside this workspace;
+   - `metadata.json` complete;
+   - hashes in `source.json` match.
+2. **Build from outside the workspace.** A scratch project in CI that uses
+   only `--registry=<pages URL>` + BCR, with no `.bazelrc` flags from this
+   repository, builds `@tracy//:client`, `:capture` and `:profiler`. Any flag
+   that turns out to be required gets documented in the README (as the Qt
+   README does for `system_include_paths`) or removed.
+3. **Sanitizers.** Run `--config=asan`, `ubsan` and `tsan` on
+   `tests/client/...` and `tests/e2e/...` (Linux native).
+   `tsan` is particularly relevant to the client's lock-free queues; tag
+   known upstream false positives.
+4. **Bazel `last_rc` stage** green and the status-matrix SVGs published;
+   README written, following the Qt README structure (motivation, try it now,
+   what's in the box, build status, licensing).
+5. **Prune.** Remove `@llvm` patches and `osx.frameworks` entries that Tracy
+   doesn't need. Bump `@llvm` if upstream has merged our patches.
+6. **Windows polish.** Icon resource and DPI-aware manifest for
+   `tracy-profiler.exe` via `llvm-rc`.
+7. **BCR submission, leaf-first:**
+   1. `capstone`, `ppqsort`, `md4c`, `base64`, `tidy-html5`, `usearch`,
+      `wayland-protocols`;
+   2. `dbus`, `libglvnd` (coordinated with the Qt workspace);
+   3. `nativefiledialog-extended`, `imgui` 1.93.0-docking bump,
+      `glfw` 3.5.1 bump (if needed);
+   4. `tracy` 0.15.0.
+
+   Send upstream projects the patches we carry (PPQSort semaphore, nfd
+   xdg-foreign-v2 if still needed, imgui #9519 if not yet merged).
+
+## 3. Explicitly out of scope (candidates for later)
+
+- Python bindings (`TRACY_CLIENT_PYTHON`, pybind11), Fortran bindings.
+- `TRACY_LIBUNWIND_BACKTRACE`, `TRACY_DEBUGINFOD`, ROCprof integration.
+- Emscripten/WASM GUI build, macOS `.app` bundle (`BUNDLE`), GTK file
+  selector.
+- `-march`-tuned server builds.
+- Tracking Tracy releases after 0.15.0. The version bump process gets
+  documented in the README once 0.15.0 lands in the BCR.
+
+## 4. Exit criteria
+
+- The REVIEW.md findings are all resolved or explicitly accepted.
+- The outside-workspace build is green.
+- BCR PRs are filed for every module, with presubmit passing.

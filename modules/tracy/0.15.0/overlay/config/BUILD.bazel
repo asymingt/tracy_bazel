@@ -1,0 +1,59 @@
+# Compile-time options for the Tracy client.
+#
+# Each upstream CMake option TRACY_<NAME> is a build setting
+# //config:<name> (lower case), with the same default as upstream. Set them
+# on the command line or in a .bazelrc:
+#
+#   build --@tracy//config:enable
+#   build --@tracy//config:on_demand
+#   build --@tracy//config:callstack=8
+#
+# The :config target turns the current values into compile definitions that
+# propagate to everything depending on @tracy//:headers, :client or
+# :client_dynamic.
+
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag", "int_flag", "string_flag")
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load(":tracy_config.bzl", "BOOL_OPTIONS", "tracy_config")
+
+package(
+    default_applicable_licenses = ["//:license"],
+    default_visibility = ["//visibility:public"],
+)
+
+[
+    bool_flag(
+        name = name,
+        build_setting_default = False,
+    )
+    for name in BOOL_OPTIONS
+]
+
+# TRACY_CALLSTACK=<depth>; 0 leaves it undefined (upstream default).
+int_flag(
+    name = "callstack",
+    build_setting_default = 0,
+)
+
+# TRACY_PLATFORM_HEADER: include path of a header providing TRACY_HAS_CUSTOM_*
+# hooks for an unsupported platform, e.g. "myproject/tracy_platform.h". Point
+# :platform_header_lib at the cc_library that provides it.
+string_flag(
+    name = "platform_header",
+    build_setting_default = "",
+)
+
+label_flag(
+    name = "platform_header_lib",
+    build_setting_default = ":empty",
+)
+
+cc_library(name = "empty")
+
+tracy_config(
+    name = "config",
+    bool_options = {":" + name: name for name in BOOL_OPTIONS},
+    callstack = ":callstack",
+    platform_header = ":platform_header",
+    platform_header_lib = ":platform_header_lib",
+)

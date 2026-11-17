@@ -1,0 +1,17 @@
+diff --git a/3rd_party/llvm-project/x.x/libcxxabi/libcxxabi.BUILD.bazel b/3rd_party/llvm-project/x.x/libcxxabi/libcxxabi.BUILD.bazel
+--- a/3rd_party/llvm-project/x.x/libcxxabi/libcxxabi.BUILD.bazel
++++ b/3rd_party/llvm-project/x.x/libcxxabi/libcxxabi.BUILD.bazel
+@@ -113,6 +113,13 @@
+     ] + select({
+         ":windows_static": [
+             "_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS",
++            # libc++abi defines symbols that libc++'s headers declare with
++            # _LIBCPP_EXPORTED_FROM_ABI (std::terminate, operator new/delete,
++            # std::exception, std::type_info, ...). Without this, every
++            # object carries `-export:` directives, so each DLL that links
++            # the static runtime re-exports them and lld fails a second DLL
++            # with "std::terminate() was replaced".
++            "_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS",
+         ],
+         "//conditions:default": [],
+     }),

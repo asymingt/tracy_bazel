@@ -1,0 +1,26 @@
+matrix:
+  platform:
+    - debian11
+    - ubuntu2204
+    - macos
+    - macos_arm64
+    - windows
+  bazel:
+    - 9.x
+tasks:
+  verify_targets:
+    name: Verify build targets
+    platform: ${{ platform }}
+    bazel: ${{ bazel }}
+    build_targets:
+      - "@tracy//:client"
+      - "@tracy//:client_shared"
+  verify_targets_enabled:
+    name: Verify build targets (TRACY_ENABLE)
+    platform: ${{ platform }}
+    bazel: ${{ bazel }}
+    build_flags:
+      - "--@tracy//config:enable"
+    build_targets:
+      - "@tracy//:client"
+      - "@tracy//:client_shared"

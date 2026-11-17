@@ -1,0 +1,33 @@
+MinGW on Windows/arm64: read CNTVCT_EL0 without the MSVC-only _ReadStatusReg, and
+skip the ARM64_CNTVCT_EL0 cross-check when winnt.h does not define it.
+
+diff --git a/public/client/TracyProfiler.cpp b/public/client/TracyProfiler.cpp
+--- a/public/client/TracyProfiler.cpp
++++ b/public/client/TracyProfiler.cpp
+@@ -284,7 +284,7 @@
+     return mapping && EnsureReadable( *mapping );
+ }
+ #elif defined WIN32
+-#ifdef TRACY_HAS_CNTVCT
++#if defined TRACY_HAS_CNTVCT && defined ARM64_CNTVCT_EL0  // MinGW's winnt.h lacks ARM64_CNTVCT_EL0
+ static_assert( TRACY_WINARM64_CNTVCT_EL0 == ARM64_CNTVCT_EL0, "ARM64_CNTVCT_EL0 mismatch" );
+ #endif
+ static bool EnsureReadable( uintptr_t address )
+diff --git a/public/client/TracyProfiler.hpp b/public/client/TracyProfiler.hpp
+--- a/public/client/TracyProfiler.hpp
++++ b/public/client/TracyProfiler.hpp
+@@ -236,7 +236,14 @@
+ #  endif
+ tracy_force_inline int64_t timestamp_win_arm64_cntvct_el0()
+ {
++#  if defined _MSC_VER
+     return _ReadStatusReg( TRACY_WINARM64_CNTVCT_EL0 );
++#  else
++    // MinGW (clang/GCC): _ReadStatusReg is only declared in MSVC-compatible mode.
++    uint64_t cntvct;
++    asm volatile( "mrs %0, cntvct_el0" : "=r" (cntvct) );
++    return (int64_t)cntvct;
++#  endif
+ }
+ #endif
+ 

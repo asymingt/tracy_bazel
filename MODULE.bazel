@@ -1,0 +1,63 @@
+# Root workspace name
+
+module(
+    name = "tracy_workspace",
+)
+
+# Hermetic LLVM toolchain
+#
+# Same version and patch set as qt_bazel_workspace, so this workspace inherits
+# a host x target matrix that is already proven. Patches Tracy turns out not
+# to need are pruned in Phase 5 (design/PHASE5.md).
+
+bazel_dep(name = "llvm", version = "0.8.25")
+single_version_override(
+    module_name = "llvm",
+    patch_strip = 1,
+    patches = [
+        "//patches:llvm/header_search_paths.patch",
+        "//patches:llvm/msan_libcxx.patch",
+        "//patches:llvm/sanitizer_runtime_libunwind.patch",
+        "//patches:llvm/sanitizer_strip_foreign_source_paths.patch",
+        "//patches:llvm/windows_compiler_param_file.patch",
+        "//patches:llvm/windows_pkg_dir_symlinks.patch",
+        "//patches:llvm/runtime_library_search_directories_dedup.patch",
+        "//patches:llvm/mingw_def_extra_tokens.patch",
+        "//patches:llvm/osx_cryptex_frameworks.patch",
+        # New in this workspace (not in qt_bazel_workspace): stops the static
+        # Windows libc++abi from re-exporting its symbols from every DLL.
+        "//patches:llvm/windows_static_libcxxabi_no_exports.patch",
+    ],
+    version = "0.8.25",
+)
+
+# Backends built into the from-source `@llvm-project` overlay (used for
+# `--@llvm//toolchain:bootstrap_stage=stage1_from_source`). Mirrors the CPUs we
+# ship (amd64 + arm64 across Linux/macOS/Windows).
+llvm = use_extension("@llvm//extensions:llvm.bzl", "llvm")
+llvm.version(llvm_version = "21.1.8")
+llvm.configure(
+    targets = [
+        "AArch64",
+        "X86",
+    ],
+)
+use_repo(llvm, "llvm-project")
+
+register_toolchains(
+    "@llvm//toolchain:all",
+    "//platforms:host_test_toolchain",
+    dev_dependency = True,
+)
+
+# BCR modules
+
+bazel_dep(name = "bazel_skylib", version = "1.9.2")
+bazel_dep(name = "platforms", version = "1.1.0")
+bazel_dep(name = "rules_cc", version = "0.2.26")
+bazel_dep(name = "rules_license", version = "1.0.0")
+bazel_dep(name = "with_cfg.bzl", version = "1.1.0", dev_dependency = True)
+
+# Local modules (served from the local registry under modules/, see .bazelrc)
+
+bazel_dep(name = "tracy", version = "0.15.0")

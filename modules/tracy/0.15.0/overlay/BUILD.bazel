@@ -1,0 +1,131 @@
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:cc_shared_library.bzl", "cc_shared_library")
+load("@rules_license//rules:license.bzl", "license")
+
+package(
+    default_applicable_licenses = [":license"],
+    default_visibility = ["//visibility:public"],
+)
+
+license(
+    name = "license",
+    license_kinds = ["@rules_license//licenses/spdx:BSD-3-Clause"],
+    license_text = "LICENSE",
+)
+
+# The bundled libbacktrace (public/libbacktrace) keeps its own license.
+license(
+    name = "libbacktrace_license",
+    license_kinds = ["@rules_license//licenses/spdx:BSD-3-Clause"],
+    license_text = "public/libbacktrace/LICENSE",
+)
+
+exports_files(["LICENSE"])
+
+# ---------------------------------------------------------------------------
+# Instrumentation client
+# ---------------------------------------------------------------------------
+#
+# Upstream builds the client from a single translation unit,
+# public/TracyClient.cpp, which #includes every other client source. All
+# other files under public/ are therefore textual headers.
+#
+# Consumers include the public API as <tracy/Tracy.hpp> (or <tracy/TracyC.h>,
+# <tracy/TracyVulkan.hpp>, ...). Compile-time options (TRACY_ENABLE, ...) are
+# Bazel build settings under //config; see config/BUILD.bazel. They arrive as
+# propagating `defines`, so every translation unit that includes Tracy sees
+# the same configuration -- matching CMake's PUBLIC compile definitions.
+# Tracy additionally mangles its exported symbol names with the most
+# ABI-relevant options (client/TracyMangle.hpp), so a mismatch fails to link.
+
+_PUBLIC_HDRS = glob([
+    "public/tracy/*.h",
+    "public/tracy/*.hpp",
+])
+
+_TEXTUAL_HDRS = glob(
+    [
+        "public/**/*.cpp",
+        "public/**/*.h",
+        "public/**/*.hpp",
+        "public/**/*.hmm",
+    ],
+    exclude = _PUBLIC_HDRS + ["public/TracyClient.cpp"],
+)
+
+_CLIENT_DEFINES = select({
+    "@platforms//os:windows": [
+        "WINVER=0x0A00",
+        "_WIN32_WINNT=0x0A00",
+    ],
+    "//conditions:default": [],
+})
+
+_CLIENT_LINKOPTS = select({
+    "@platforms//os:linux": [
+        "-lpthread",
+        "-ldl",
+    ],
+    "@platforms//os:windows": [
+        "-lws2_32",
+        "-ldbghelp",
+        "-lsecur32",
+        "-ladvapi32",
+        "-luser32",
+    ],
+    "//conditions:default": [],
+})
+
+# Header-only view of the API with the configured defines. Lets a library be
+# instrumented without linking the client; the final binary must still link
+# exactly one of :client or :client_dynamic (+ :client_shared).
+cc_library(
+    name = "headers",
+    hdrs = _PUBLIC_HDRS,
+    defines = _CLIENT_DEFINES,
+    includes = ["public"],
+    textual_hdrs = _TEXTUAL_HDRS,
+    deps = ["//config"],
+)
+
+# Static client: link into the one binary (or shared object) that owns the
+# profiler.
+cc_library(
+    name = "client",
+    srcs = ["public/TracyClient.cpp"],
+    applicable_licenses = [
+        ":license",
+        ":libbacktrace_license",
+    ],
+    linkopts = _CLIENT_LINKOPTS,
+    deps = [":headers"],
+)
+
+# Client for use through :client_shared. Depend on this target and add
+# `dynamic_deps = ["@tracy//:client_shared"]` to the cc_binary/cc_test (and to
+# every cc_shared_library that uses Tracy), so all of them share a single
+# profiler instance at run time. Never mix :client and :client_dynamic in one
+# link.
+cc_library(
+    name = "client_dynamic",
+    srcs = ["public/TracyClient.cpp"],
+    applicable_licenses = [
+        ":license",
+        ":libbacktrace_license",
+    ],
+    defines = ["TRACY_IMPORTS"],
+    linkopts = _CLIENT_LINKOPTS,
+    local_defines = ["TRACY_EXPORTS"],
+    deps = [":headers"],
+)
+
+cc_shared_library(
+    name = "client_shared",
+    exports_filter = [":headers"],
+    shared_lib_name = select({
+        "@platforms//os:macos": "libTracyClient.dylib",
+        "@platforms//os:windows": "TracyClient.dll",
+        "//conditions:default": "libTracyClient.so",
+    }),
+    deps = [":client_dynamic"],
+)

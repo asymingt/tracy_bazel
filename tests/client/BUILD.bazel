@@ -1,0 +1,111 @@
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:cc_shared_library.bzl", "cc_shared_library")
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
+load(
+    ":defs.bzl",
+    "tracy_enabled_cc_test",
+    "tracy_fibers_cc_test",
+    "tracy_manual_lifetime_cc_test",
+    "tracy_minimal_cc_test",
+    "tracy_on_demand_cc_test",
+    "tracy_timer_fallback_cc_test",
+)
+
+cc_library(
+    name = "c_api",
+    srcs = ["c_api.c"],
+    deps = ["@tracy//:headers"],
+)
+
+# Default flags: profiling compiled out.
+cc_test(
+    name = "disabled_test",
+    srcs = ["disabled_test.cc"],
+    deps = ["@tracy//:client"],
+)
+
+# TRACY_ENABLE, static client.
+tracy_enabled_cc_test(
+    name = "enabled_test",
+    srcs = ["enabled_test.cc"],
+    deps = [
+        ":c_api",
+        "@tracy//:client",
+    ],
+)
+
+# The same program under non-default option combinations.
+[
+    rule(
+        name = "enabled_%s_test" % variant,
+        srcs = ["enabled_test.cc"],
+        deps = [
+            ":c_api",
+            "@tracy//:client",
+        ],
+    )
+    for variant, rule in [
+        ("on_demand", tracy_on_demand_cc_test),
+        ("minimal", tracy_minimal_cc_test),
+        ("fibers", tracy_fibers_cc_test),
+        ("timer_fallback", tracy_timer_fallback_cc_test),
+    ]
+]
+
+tracy_manual_lifetime_cc_test(
+    name = "manual_lifetime_test",
+    srcs = ["manual_lifetime_test.cc"],
+    deps = ["@tracy//:client"],
+)
+
+# ---------------------------------------------------------------------------
+# Shared client: one profiler instance across several DSOs.
+# ---------------------------------------------------------------------------
+
+[
+    cc_library(
+        name = plugin,
+        srcs = ["plugin.cc"],
+        local_defines = ["PLUGIN_NAME=" + plugin],
+        deps = ["@tracy//:client_dynamic"],
+    )
+    for plugin in [
+        "plugin_a",
+        "plugin_b",
+    ]
+]
+
+[
+    cc_shared_library(
+        name = plugin + "_shared",
+        dynamic_deps = ["@tracy//:client_shared"],
+        # With the MinGW @llvm toolchain the default output is lib<name>.so,
+        # which lld's -l<name> lookup does not find; name the DLL explicitly
+        # (as @tracy//:client_shared does).
+        shared_lib_name = select({
+            "@platforms//os:windows": plugin + ".dll",
+            "//conditions:default": None,
+        }),
+        deps = [":" + plugin],
+    )
+    for plugin in [
+        "plugin_a",
+        "plugin_b",
+    ]
+]
+
+tracy_enabled_cc_test(
+    name = "shared_two_dso_test",
+    srcs = ["shared_two_dso_test.cc"],
+    dynamic_deps = [
+        ":plugin_a_shared",
+        ":plugin_b_shared",
+        "@tracy//:client_shared",
+    ],
+    deps = [
+        ":plugin_a",
+        ":plugin_b",
+        "@tracy//:client_dynamic",
+    ],
+)
+

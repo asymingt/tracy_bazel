@@ -1,0 +1,15 @@
+{
+    "integrity": "sha256-PVfaVKpn14ddoej+zQvVlXZ1zvc8J91Sv/tquNKQpeY=",
+    "strip_prefix": "tracy-0.15.0",
+    "url": "https://github.com/wolfpld/tracy/archive/refs/tags/v0.15.0.tar.gz",
+    "overlay": {
+        "BUILD.bazel": "sha256-VfGbgiJ0SvuIUWB1zbGBZIwLIClE+8JD47l1Audl0pY=",
+        "MODULE.bazel": "sha256-Tl5xYHf4w0SU6lzHESiKVDuoxa6cnqYfnMrEEHc2PDw=",
+        "config/BUILD.bazel": "sha256-H1a9/wkzzFFq51icPgpFTiaONlLmEhCGoGQ6Bt+j1XI=",
+        "config/tracy_config.bzl": "sha256-3iw9AxXRmMnISbTwhW11NAEE0vhOjQbKwMLAhad6/Kw="
+    },
+    "patches": {
+        "mingw_arm64_cntvct.patch": "sha256-pDVh3CNIXtkr82Pb59uAMLXhZ+bnBmtYJfImODauSTU="
+    },
+    "patch_strip": 1
+}
