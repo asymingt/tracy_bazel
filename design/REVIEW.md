@@ -139,6 +139,16 @@ Run over `tests/{client,tools,ppqsort,base64}`:
   client tests (static, shared, fibers, on-demand, manual lifetime) are
   TSan-clean.
 
+### F7. Bazel `last_rc` on Windows: stale `_tmp/actions` output
+
+With Bazel `last_rc` on both Windows runners, the `bazel test` that follows
+`bazel build` fails within seconds with "Couldn't delete action output
+directory: .../bazel-out/_tmp/actions/stderr-N (Permission denied)" and exit
+code 36, before running anything. Bazel 9.x is not affected. It reproduced on
+three consecutive runs. The test step restarts the server and retries once on
+exit code 36 (with a `::warning::`), which has passed every time. To report
+upstream with a minimal reproduction; remove the retry once fixed.
+
 ## Deferred (explicitly out of scope)
 
 - Windows icon and DPI manifest for `tracy-profiler.exe`. Upstream compiles

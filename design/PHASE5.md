@@ -102,6 +102,18 @@ workspace in a maintainable state, using what the Qt workspace learned in
      still-open file, which fails on Windows (MSVC as well). It broke
      `tracy-update` and `tracy-merge` there, and was found by the end-to-end
      test on the Windows CI runners.
-8. **BCR submission** (leaf-first order in REVIEW) waits on the maintainer:
+8. **CI status.** `4336733` is green across the board: 6 native and 30 cross
+   jobs on both Bazel 9.x and `last_rc`, plus the Consumer workflow on Ubuntu
+   (GCC), macOS (Apple clang) and Windows (MSVC). Fixes found on the way:
+   - MSVC: Bazel quote-includes every repository root, and cl.exe treats
+     quote includes as `/I`, so usearch's root `VERSION` shadowed `<version>`
+     on a case-insensitive file system (`remove_version_file.patch`); capstone
+     now declares `include/platform.h`.
+   - Windows-host cross builds: `windows_pkg_dir_symlinks.patch` and
+     `--nointerface_shared_objects` (REVIEW F1).
+   - sway's IPC socket path must fit in `sun_path`, so the headless test uses a
+     short runtime folder.
+   - Bazel `last_rc` on Windows: retry on exit code 36 (REVIEW F7).
+9. **BCR submission** (leaf-first order in REVIEW) waits on the maintainer:
    - the go-ahead for an outward-facing action, and
    - the `imgui` naming decision (REVIEW F3).
