@@ -1,0 +1,14 @@
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
+
+cc_test(
+    name = "imgui_test",
+    srcs = [
+        "bcr_includes.cc",
+        "imgui_test.cc",
+    ],
+    deps = [
+        "@imgui",
+        "@imgui//backends:platform-glfw",
+        "@imgui//backends:renderer-opengl3",
+    ],
+)

@@ -1,0 +1,13 @@
+module(
+    name = "imgui",
+    version = "1.93.0-docking.tracy.1",
+    bazel_compatibility = [">=9.0.0"],
+    compatibility_level = 0,
+)
+
+bazel_dep(name = "freetype", version = "2.14.1.bcr.1")
+bazel_dep(name = "glfw", version = "3.4.0.bcr.4")
+bazel_dep(name = "libx11", version = "1.8.12.bcr.5")
+bazel_dep(name = "platforms", version = "1.1.0")
+bazel_dep(name = "rules_cc", version = "0.2.26")
+bazel_dep(name = "rules_license", version = "1.0.0")

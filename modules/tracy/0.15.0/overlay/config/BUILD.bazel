@@ -57,3 +57,53 @@ tracy_config(
     platform_header = ":platform_header",
     platform_header_lib = ":platform_header_lib",
 )
+
+# ---------------------------------------------------------------------------
+# tracy-profiler (GUI) options. These do not affect the client library.
+# ---------------------------------------------------------------------------
+
+# Window-system backend on Linux: "wayland" (upstream default) or "x11"
+# (upstream's LEGACY option: GLFW on X11). macOS and Windows always use GLFW.
+string_flag(
+    name = "linux_backend",
+    build_setting_default = "wayland",
+    values = [
+        "wayland",
+        "x11",
+    ],
+)
+
+config_setting(
+    name = "linux_wayland",
+    constraint_values = ["@platforms//os:linux"],
+    flag_values = {":linux_backend": "wayland"},
+)
+
+config_setting(
+    name = "linux_x11",
+    constraint_values = ["@platforms//os:linux"],
+    flag_values = {":linux_backend": "x11"},
+)
+
+# Build without the native file dialog (upstream NO_FILESELECTOR).
+bool_flag(
+    name = "no_fileselector",
+    build_setting_default = False,
+)
+
+config_setting(
+    name = "no_fileselector_on",
+    flag_values = {":no_fileselector": "True"},
+)
+
+# Profile the profiler itself (upstream SELF_PROFILE): compiles the client into
+# tracy-profiler with TRACY_ENABLE.
+bool_flag(
+    name = "self_profile",
+    build_setting_default = False,
+)
+
+config_setting(
+    name = "self_profile_on",
+    flag_values = {":self_profile": "True"},
+)

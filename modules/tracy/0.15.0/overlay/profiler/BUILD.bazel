@@ -1,0 +1,232 @@
+# tracy-profiler: the ImGui GUI (upstream profiler/CMakeLists.txt).
+#
+#   bazel run @tracy//:tracy-profiler
+#   bazel run @tracy//:tracy-profiler --@tracy//config:linux_backend=x11
+#
+# Window-system backend: native Wayland on Linux by default, GLFW on X11 with
+# --@tracy//config:linux_backend=x11, GLFW everywhere else. GL and the
+# compositor/X server are loaded from the host at run time.
+
+load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@wayland-protocols//:wayland_protocol.bzl", "wayland_client_protocol")
+load(":embed.bzl", "tracy_embed")
+
+package(
+    default_applicable_licenses = ["//:license"],
+    default_visibility = ["//visibility:private"],
+)
+
+_CXX20 = select({
+    "@rules_cc//cc/compiler:msvc-cl": ["/std:c++20"],
+    "@rules_cc//cc/compiler:clang-cl": ["/std:c++20"],
+    "//conditions:default": ["-std=c++20"],
+})
+
+_WINDOWS_DEFINES = select({
+    "@platforms//os:windows": [
+        "NOMINMAX",
+        "WIN32_LEAN_AND_MEAN",
+        "WINVER=0x0A00",
+        "_WIN32_WINNT=0x0A00",
+        "_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR",
+    ],
+    "//conditions:default": [],
+})
+
+# ---------------------------------------------------------------------------
+# Embedded data (fonts, LLM prompts, achievements, manual)
+# ---------------------------------------------------------------------------
+
+cc_binary(
+    name = "embed",
+    srcs = ["helpers/embed.cpp"],
+    copts = _CXX20,
+    deps = ["//:common"],
+)
+
+_FONTS = {
+    "FontFixed": "src/font/FiraCode-Retina.ttf",
+    "FontIcons": "src/font/Font Awesome 7 Free-Solid-900.otf",
+    "FontNormal": "src/font/Roboto-Regular.ttf",
+    "FontBold": "src/font/Roboto-Bold.ttf",
+    "FontItalic": "src/font/Roboto-Italic.ttf",
+    "FontBoldItalic": "src/font/Roboto-BoldItalic.ttf",
+    "FontEmoji": "src/font/NotoEmoji-Regular.ttf",
+    "FontCjk": "src/font/SourceHanSans-Normal.ttc",
+}
+
+_TEXTS = {
+    "PersonalityAnnoyed": "src/llm/personality.annoyed.md",
+    "PersonalityEmotion": "src/llm/personality.emotion.md",
+    "SystemPrompt": "src/llm/system.prompt.md",
+    "SkillCallstack": "src/llm/skill.callstack.md",
+    "SkillOptimization": "src/llm/skill.optimization.md",
+    "ToolsJson": "src/llm/tools.json",
+    # Generated from manual/tracy.tex by tools/regen_manual.sh (upstream does
+    # this at build time with pandoc + Python; see design/PHASE4.md).
+    "Manual": "generated/tracy.md",
+} | {
+    # Embed(... Text<Name> src/achievements/<Name>.md TEXT)
+    "Text" + f.removeprefix("src/achievements/").removesuffix(".md"): f
+    for f in glob(["src/achievements/*.md"])
+}
+
+tracy_embed(
+    name = "embedded",
+    files = {src: name + ":binary" for name, src in _FONTS.items()} |
+            {src: name + ":text" for name, src in _TEXTS.items()},
+)
+
+filegroup(
+    name = "embedded_srcs",
+    srcs = [":embedded"],
+    output_group = "srcs",
+)
+
+filegroup(
+    name = "embedded_hdrs",
+    srcs = [":embedded"],
+    output_group = "hdrs",
+)
+
+cc_library(
+    name = "embedded_data",
+    srcs = [":embedded_srcs"],
+    hdrs = [":embedded_hdrs"],
+    copts = _CXX20,
+    includes = ["gen"],
+)
+
+# ---------------------------------------------------------------------------
+# Wayland protocols (BackendWayland.cpp), named as ECM's
+# ecm_add_wayland_client_protocol(... BASENAME <x>) would:
+# wayland-<x>-client-protocol.h
+# ---------------------------------------------------------------------------
+
+_WAYLAND_PROTOCOLS = {
+    "xdg-shell": "stable/xdg-shell/xdg-shell.xml",
+    "xdg-activation": "staging/xdg-activation/xdg-activation-v1.xml",
+    "xdg-decoration": "unstable/xdg-decoration/xdg-decoration-unstable-v1.xml",
+    "fractional-scale": "staging/fractional-scale/fractional-scale-v1.xml",
+    "viewporter": "stable/viewporter/viewporter.xml",
+    "cursor-shape": "staging/cursor-shape/cursor-shape-v1.xml",
+    "tablet": "unstable/tablet/tablet-unstable-v2.xml",
+    "xdg-toplevel-icon": "staging/xdg-toplevel-icon/xdg-toplevel-icon-v1.xml",
+}
+
+[
+    wayland_client_protocol(
+        name = "wl_" + basename.replace("-", "_"),
+        src = "@wayland-protocols//:" + xml,
+        basename = "wayland-" + basename,
+        target_compatible_with = ["@platforms//os:linux"],
+    )
+    for basename, xml in _WAYLAND_PROTOCOLS.items()
+]
+
+_WAYLAND_DEPS = [":wl_" + b.replace("-", "_") for b in _WAYLAND_PROTOCOLS] + [
+    "@libglvnd//:EGL",
+    "@wayland//:wayland_client",
+    "@wayland//:wayland_cursor",
+    "@wayland//:wayland_egl",
+    "@xkbcommon",
+]
+
+_GLFW_DEPS = [
+    "@glfw",
+    "@imgui//backends:platform-glfw",
+]
+
+# ---------------------------------------------------------------------------
+# tracy-profiler
+# ---------------------------------------------------------------------------
+
+cc_binary(
+    name = "tracy-profiler",
+    srcs = glob(
+        [
+            "src/*.cpp",
+            "src/*.c",
+            "src/*.h",
+            "src/*.hpp",
+            "src/profiler/*.cpp",
+            "src/profiler/*.h",
+            "src/profiler/*.hpp",
+        ],
+        exclude = [
+            "src/BackendEmscripten.cpp",
+            "src/BackendGlfw.cpp",
+            "src/BackendWayland.cpp",
+        ],
+    ) + select({
+        "//config:linux_wayland": ["src/BackendWayland.cpp"],
+        "//conditions:default": ["src/BackendGlfw.cpp"],
+    }) + select({
+        "//config:self_profile_on": ["//:public/TracyClient.cpp"],
+        "//conditions:default": [],
+    }),
+    conlyopts = select({
+        "@rules_cc//cc/compiler:msvc-cl": [],
+        "@rules_cc//cc/compiler:clang-cl": [],
+        "//conditions:default": ["-std=c11"],
+    }),
+    cxxopts = _CXX20,
+    linkopts = select({
+        "@platforms//os:linux": [
+            "-lpthread",
+            "-ldl",
+        ],
+        "@platforms//os:windows": [
+            # curl -> BoringSSL uses pthreads under MinGW (crypto/internal.h);
+            # the @llvm MinGW runtime provides a static winpthreads as -lpthread.
+            "-lpthread",
+            "-lws2_32",
+            "-ladvapi32",
+            "-ldbghelp",
+            "-lole32",
+            "-lshell32",
+            "-luser32",
+            "-lgdi32",
+        ],
+        "//conditions:default": [],
+    }),
+    local_defines = _WINDOWS_DEFINES + select({
+        "//config:no_fileselector_on": ["TRACY_NO_FILESELECTOR"],
+        "//conditions:default": [],
+    }) + select({
+        "//config:self_profile_on": ["TRACY_ENABLE"],
+        "//conditions:default": [],
+    }),
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "@platforms//os:macos": [],
+        "@platforms//os:windows": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    visibility = ["//visibility:public"],
+    deps = [
+        ":embedded_data",
+        "//:dtl",
+        "//:git_ref",
+        "//:server",
+        "@base64",
+        "@curl",
+        "@imgui",
+        "@imgui//backends:renderer-opengl3",
+        "@md4c",
+        "@nlohmann_json//:json",
+        "@pugixml",
+        "@tidy-html5//:tidy",
+        "@usearch",
+    ] + select({
+        "//config:linux_wayland": _WAYLAND_DEPS,
+        "//conditions:default": _GLFW_DEPS,
+    }) + select({
+        "//config:no_fileselector_on": [],
+        "//conditions:default": ["@nativefiledialog-extended//:nfd"],
+    }) + select({
+        "//config:self_profile_on": ["//:public_sources"],
+        "//conditions:default": [],
+    }),
+)

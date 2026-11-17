@@ -4,8 +4,9 @@ This repository is a **staging area for a Bazel module that builds the
 [Tracy](https://github.com/wolfpld/tracy) frame profiler (v0.15.0) from
 source**, together with the dependency modules it needs that are not yet in
 the [Bazel Central Registry](https://registry.bazel.build). It holds a local
-Bazel registry (`bazel_registry.json` + `modules/`) with `tracy`, `capstone`
-6.0.0-alpha.11 and `ppqsort` 1.0.6, consumer-style tests, and
+Bazel registry (`bazel_registry.json` + `modules/`) with `tracy` and the
+dependencies it needs that are not in the BCR (see [Modules](#modules)),
+consumer-style tests, and
 CI that builds everything natively and cross-compiles it for every
 {Linux, macOS, Windows} × {amd64, arm64} pair with a hermetic LLVM toolchain.
 
@@ -24,7 +25,7 @@ plan and phasing are in [`design/`](design/OVERVIEW.md).
 | --- | --- | --- |
 | [1](design/PHASE1.md) | Workspace + instrumentation client (`@tracy//:client`) | done |
 | [2](design/PHASE2.md) | Server library + CLI tools (`tracy-capture`, `tracy-csvexport`, ...) | done |
-| [3](design/PHASE3.md) | GUI dependency modules | planned |
+| [3](design/PHASE3.md) | GUI dependency modules | done |
 | [4](design/PHASE4.md) | GUI profiler (`tracy-profiler`) | planned |
 | [5](design/PHASE5.md) | Hardening + BCR upstreaming | planned |
 
@@ -138,6 +139,23 @@ rather than at run time.
 
 Not provided, because they need libraries this module does not package:
 `TRACY_LIBUNWIND_BACKTRACE`, `TRACY_DEBUGINFOD`, and ROCm (`TRACY_ROCPROF*`).
+
+## Modules
+
+| Module | Version | Used by | Notes |
+| --- | --- | --- | --- |
+| `tracy` | 0.15.0 | | client, server, CLI tools (GUI in Phase 4) |
+| `capstone` | 6.0.0-alpha.11 | server | all architectures |
+| `ppqsort` | 1.0.6 | server | 2 patches |
+| `imgui` | 1.93.0-docking.tracy.1 | GUI | Tracy's six patches; GLFW + OpenGL3 backends |
+| `nativefiledialog-extended` | 1.4.1 | GUI | Win32/Cocoa/xdg-portal; Tracy's xdg-foreign v2 patch |
+| `md4c` | 0.6.0.20261013 | GUI | Tracy's pinned commit |
+| `base64` | 0.5.2 | GUI (LLM) | per-codec SIMD flags, runtime dispatch |
+| `tidy-html5` | 5.8.0 | GUI (LLM) | |
+| `usearch` | 2.26.4 | GUI (LLM) | header-only |
+| `wayland-protocols` | 1.50 | GUI, nfd | plus `wayland_client_protocol()` |
+| `dbus` | 1.16.2 | nfd | shared with qt_bazel_workspace |
+| `libglvnd` | 1.7.0 | GUI (Linux) | shared with qt_bazel_workspace |
 
 ## Toolchain notes
 

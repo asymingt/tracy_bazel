@@ -136,3 +136,71 @@ workspace, and each one also the `presubmit.yml` target:
   arm64 MinGW (NEON intrinsics headers).
 - An upstream bump of imgui, glfw or freetype in the BCR while we work.
   Re-check against BCR head before filing PRs (Phase 5).
+
+## 6. As built (2026-11-17)
+
+| Module | Version | Notes |
+| --- | --- | --- |
+| `imgui` | `1.93.0-docking.tracy.1` | See below. |
+| `nativefiledialog-extended` | `1.4.1` | Win32 COM, Cocoa, and Linux xdg-desktop-portal backends (no GTK). Linux has X11 and Wayland parenting. The Cocoa backend is compiled without ARC (`non_arc_srcs`). Carries Tracy's xdg-foreign v2 patch. The tarball's `3ps/wayland-protocols` submodule is empty, so the XML comes from `@wayland-protocols`. |
+| `md4c` | `0.6.0.20261013` | Tracy's pinned commit, 38 commits after release 0.6.0. The fourth component is the date, so it sorts after 0.6.0 (a `-` suffix would make it a pre-release that sorts *before* 0.6.0). |
+| `base64` | `0.5.2` | See below. |
+| `tidy-html5` | `5.8.0` | Library only, all localizations. Tracy's `tidy-cmake.patch` touches only CMake and is not needed. |
+| `usearch` | `2.26.4` | Header-only. No OpenMP or NumKong; software f16/bf16 on every compiler. Patch: `<Windows.h>` → `<windows.h>`, needed for cross-compiling from case-sensitive hosts. |
+| `wayland-protocols` | `1.50` | Exports every XML file, plus `wayland_protocol.bzl`'s `wayland_client_protocol()`. That macro runs `wayland-scanner` directly with input and output paths as arguments (no shell), and has `basename`/`header` overrides. |
+| `dbus` | `1.16.2` | Byte-identical copy from qt_bazel_workspace. |
+| `libglvnd` | `1.7.0` | Byte-identical copy from qt_bazel_workspace. |
+
+**imgui.** The module carries all six of Tracy's `cmake/imgui-*.patch` files.
+It is tracy-flavoured rather than a pristine BCR bump (the user's choice),
+hence the `.tracy.1` suffix, which keeps it from colliding with a future BCR
+`1.93.0-docking`.
+- It keeps the BCR target names (`//:imgui`,
+  `//backends:platform-glfw`, `//backends:renderer-opengl3`) and both include
+  spellings: `<imgui/imgui_impl_glfw.h>`, and Tracy's
+  `<backends/imgui_impl_glfw.h>` relative to the source root.
+- It deliberately does **not** define `IMGUI_DEFINE_MATH_OPERATORS`, because
+  Tracy's `main.cpp` defines it and `TracyImGui.hpp` tests its value.
+- The OpenGL loader loads the GL library at run time, so nothing GL-related is
+  linked.
+- `-lgdi32 -luser32 -lshell32` go on the GLFW backend for Windows, because BCR
+  glfw only passes MSVC-style `-DEFAULTLIB:` flags, which MinGW ignores. Worth
+  fixing in BCR glfw.
+
+**base64.** A static `config/config.h` picks the codecs per CPU from compiler
+macros: all x86 SIMD codecs on x86-64, NEON64 on arm64. Each x86 codec is its
+own `cc_library`, so only its `codec.c` gets that codec's ISA flags, with MSVC
+equivalents via a `cpu + compiler` `config_setting`. The run-time dispatcher
+(`codec_choose.c`) keeps one binary correct on any CPU. Forcing a codec the
+CPU lacks is undefined behaviour upstream, so the test gates forced codecs on
+`__builtin_cpu_supports`.
+
+**glfw.** `BackendGlfw.cpp` and imgui 1.93's GLFW backend use only symbols
+present in 3.4, so BCR `glfw` 3.4.0.bcr.4 is used and no 3.5.1 module was
+needed.
+
+**Root workspace additions.**
+- `osx.frameworks(...)`: the Cocoa stack for GLFW, nfd and imgui. `PrintCore`
+  must be listed, because the `osx` extension only extracts
+  `usr/include/cups` (needed via Carbon → ApplicationServices → PrintCore)
+  when it is.
+- Pins `libexpat` 2.8.3 and `rules_cc_autoconf` 0.27.0, and adds the
+  bison/m4 `.bazelrc` flags for Windows execution platforms. These are copied
+  from qt_bazel_workspace for Windows-hosted cross builds, and have not yet
+  been verified in this repo's CI.
+
+**Tests.** `tests/{imgui,nfd,md4c,base64,tidy,usearch,wayland_protocols}`:
+- imgui: compile-time checks of the patched config and loader; FreeType
+  loader present; both backends link.
+- nfd: `NFD_Init` succeeds, or fails cleanly without a D-Bus session bus.
+- md4c: Markdown → HTML.
+- base64: every codec this CPU supports round-trips.
+- tidy: repairs malformed HTML.
+- usearch: 1000/1000 self-recall.
+- wayland_protocols: all nine Tracy/nfd protocols generate, compile and link.
+
+Verified locally on a linux-amd64 host:
+- all 20 tests pass natively;
+- `--config=tracy` builds for all five other targets;
+- every new module also builds from an external workspace with the host's
+  GCC 15 toolchain.

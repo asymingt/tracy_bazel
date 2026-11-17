@@ -1,0 +1,10 @@
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
+
+cc_test(
+    name = "md4c_test",
+    srcs = ["md4c_test.c"],
+    deps = [
+        "@md4c",
+        "@md4c//:md4c-html",
+    ],
+)

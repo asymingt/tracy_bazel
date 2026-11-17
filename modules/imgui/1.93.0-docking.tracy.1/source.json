@@ -1,0 +1,19 @@
+{
+    "integrity": "sha256-dGwmVUC9OqEJVw8pSS702PW0Id2f0AScNco18hSW8aU=",
+    "strip_prefix": "imgui-1.93.0-docking",
+    "url": "https://github.com/ocornut/imgui/archive/refs/tags/v1.93.0-docking.tar.gz",
+    "overlay": {
+        "BUILD.bazel": "sha256-MevnOBGw/225PjeUmAOl1EXqslB6Y2+X/cDjFi0Pnpo=",
+        "MODULE.bazel": "sha256-+Vs2V1CZ24rVB8CR1yHGOolFibODV/5sX29eJwUz6ok=",
+        "backends/BUILD.bazel": "sha256-dqLdZLW7pHQCeQtIOySYlijPexBReqgWctHWsdFpmgM="
+    },
+    "patches": {
+        "imgui-emscripten.patch": "sha256-AV6vvB5u8yG8ASsOJHGQPvf8jy5asNkxdX9KBmsVdpo=",
+        "imgui-loader.patch": "sha256-SMR7dqdUtSl+Nb9MCkgYSOIq8osjH60Mu2Yo6NHswsU=",
+        "imgui-macos-clipboard.patch": "sha256-53hLD634Rl+A1Y/GafzkJRZcT5Z44UhYbp8xiH3jkLM=",
+        "imgui-no-default-font.patch": "sha256-EQlXMJVcuBnvjmdGDQUic5x+YoaiytHNxe5kjJKH3zM=",
+        "imgui-no-samplers.patch": "sha256-1BxOrV5OyeqtBG9HfqFgPEysLyKkkBG+7j7sGEXzcuQ=",
+        "imgui-phantom-column.patch": "sha256-U2TXlwr7JPnBLqmaLIwg1pRXGFE0fRlQAkRQxqptT4I="
+    },
+    "patch_strip": 1
+}

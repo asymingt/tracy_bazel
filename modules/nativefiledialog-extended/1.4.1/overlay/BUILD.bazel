@@ -1,0 +1,98 @@
+# Native file dialogs: Win32 (COM), Cocoa, and on Linux the
+# xdg-desktop-portal backend over D-Bus (upstream's NFD_PORTAL=ON), with X11
+# and Wayland parent-window support. The GTK backend is not provided.
+
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:objc_library.bzl", "objc_library")
+load("@rules_license//rules:license.bzl", "license")
+load("@wayland-protocols//:wayland_protocol.bzl", "wayland_client_protocol")
+
+package(
+    default_applicable_licenses = [":license"],
+    default_visibility = ["//visibility:public"],
+)
+
+license(
+    name = "license",
+    license_kinds = ["@rules_license//licenses/spdx:Zlib"],
+    license_text = "LICENSE",
+)
+
+exports_files(["LICENSE"])
+
+_HDRS = glob(["src/include/*.h"]) + ["src/include/nfd.hpp"]
+
+# Parent-window export on Wayland (patches/xdg_foreign_v2.patch).
+wayland_client_protocol(
+    name = "xdg_foreign_v2",
+    src = "@wayland-protocols//:unstable/xdg-foreign/xdg-foreign-unstable-v2.xml",
+    header = "xdg-foreign-unstable-v2.h",
+    target_compatible_with = ["@platforms//os:linux"],
+    visibility = ["//visibility:private"],
+)
+
+objc_library(
+    name = "nfd_cocoa",
+    # Manual retain/release (upstream's CMake build does not enable ARC).
+    non_arc_srcs = ["src/nfd_cocoa.m"],
+    hdrs = _HDRS,
+    includes = ["src/include"],
+    linkopts = [
+        "-framework",
+        "AppKit",
+        "-framework",
+        "UniformTypeIdentifiers",
+    ],
+    # Upstream enables this when targeting macOS >= 11.
+    copts = ["-DNFD_MACOS_ALLOWEDCONTENTTYPES=1"],
+    target_compatible_with = ["@platforms//os:macos"],
+    visibility = ["//visibility:private"],
+)
+
+cc_library(
+    name = "nfd",
+    srcs = select({
+        "@platforms//os:linux": [
+            "src/nfd_linux_shared.hpp",
+            "src/nfd_portal.cpp",
+        ],
+        "@platforms//os:windows": ["src/nfd_win.cpp"],
+        "//conditions:default": [],
+    }),
+    hdrs = _HDRS,
+    defines = select({
+        "@platforms//os:linux": ["NFD_PORTAL"],
+        "//conditions:default": [],
+    }),
+    includes = ["src/include"],
+    linkopts = select({
+        "@platforms//os:windows": [
+            "-lole32",
+            "-luuid",
+            "-lshell32",
+        ],
+        "//conditions:default": [],
+    }),
+    local_defines = select({
+        "@platforms//os:linux": [
+            "NFD_WAYLAND",
+            "NFD_X11",
+        ],
+        "//conditions:default": [],
+    }),
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "@platforms//os:macos": [],
+        "@platforms//os:windows": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = select({
+        "@platforms//os:linux": [
+            ":xdg_foreign_v2",
+            "@dbus",
+            "@wayland//:wayland_client",
+        ],
+        "@platforms//os:macos": [":nfd_cocoa"],
+        "//conditions:default": [],
+    }),
+)

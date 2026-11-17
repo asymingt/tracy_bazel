@@ -1,0 +1,29 @@
+profiler/src/main.cpp: work without std::atomic<std::shared_ptr<T>>.
+
+libc++ (LLVM 21 and Apple's) does not implement P0718, so fall back to the
+C++11 atomic shared_ptr free functions when __cpp_lib_atomic_shared_ptr is
+not defined.
+
+diff --git a/profiler/src/main.cpp b/profiler/src/main.cpp
+--- a/profiler/src/main.cpp
++++ b/profiler/src/main.cpp
+@@ -94,7 +94,19 @@
+ 
+ static tracy::unordered_flat_map<uint64_t, ClientData> clients;
+ static uint64_t clientOrder = 0;
++#ifdef __cpp_lib_atomic_shared_ptr
+ static std::atomic<std::shared_ptr<tracy::View>> view;
++#else
++// libc++ does not implement std::atomic<std::shared_ptr<T>> (P0718); provide
++// the same load/store interface on top of the C++11 atomic shared_ptr
++// free functions.
++static struct
++{
++    std::shared_ptr<tracy::View> ptr;
++    std::shared_ptr<tracy::View> load( std::memory_order order ) const { return std::atomic_load_explicit( &ptr, order ); }
++    void store( std::shared_ptr<tracy::View> value, std::memory_order order ) { std::atomic_store_explicit( &ptr, std::move( value ), order ); }
++} view;
++#endif
+ static tracy::BadVersionState badVer;
+ static uint16_t port = 8086;
+ static const char* connectTo = nullptr;

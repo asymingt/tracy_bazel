@@ -1,0 +1,51 @@
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+
+package(
+    default_applicable_licenses = ["//:license"],
+    default_visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "platform-glfw",
+    srcs = ["imgui_impl_glfw.cpp"],
+    hdrs = ["imgui_impl_glfw.h"],
+    include_prefix = "imgui",
+    includes = ["."],
+    # BCR glfw's Win32 backend only passes MSVC-style -DEFAULTLIB:<lib>.lib,
+    # which MinGW toolchains ignore. MSVC's linker likewise ignores (with a
+    # warning) these MinGW-style flags.
+    linkopts = select({
+        "@platforms//os:windows": [
+            "-lgdi32",
+            "-luser32",
+            "-lshell32",
+        ],
+        "//conditions:default": [],
+    }),
+    deps = [
+        "//:imgui",
+        "@glfw",
+    ] + select({
+        # <X11/Xatom.h> for glfwGetX11Display()/glfwGetX11Window().
+        "@platforms//os:linux": ["@libx11"],
+        "//conditions:default": [],
+    }),
+)
+
+# The bundled GL loader (imgui_impl_opengl3_loader.h) opens the platform's GL
+# library at run time, so nothing GL-related is needed at link time.
+cc_library(
+    name = "renderer-opengl3",
+    srcs = ["imgui_impl_opengl3.cpp"],
+    hdrs = [
+        "imgui_impl_opengl3.h",
+        "imgui_impl_opengl3_loader.h",
+    ],
+    include_prefix = "imgui",
+    includes = ["."],
+    linkopts = select({
+        "@platforms//os:linux": ["-ldl"],
+        "//conditions:default": [],
+    }),
+    deps = ["//:imgui"],
+)
