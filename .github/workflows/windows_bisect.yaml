@@ -1,0 +1,90 @@
+# Experiment for https://github.com/asymingt/tracy_bazel/issues/1 (lives only on
+# ci/* branches): run each //tests/bisect variant many times on native Windows
+# to find which Tracy option the intermittent stack-smashing abort depends on.
+name: Windows bisect
+
+on:
+  push:
+    branches:
+      - "ci/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bisect:
+    name: bisect ${{ matrix.host }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { host: windows-amd64, runner: windows-2025 }
+          - { host: windows-arm64, runner: windows-11-arm }
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 300
+    env:
+      USE_BAZEL_VERSION: "9.x"
+      DISK_CACHE_DIR: C:/_bzl_disk
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Exclude Bazel directories from Defender
+        shell: pwsh
+        run: |
+          $paths = @('C:\_bzl', 'C:\_bazel', 'D:\_bazel', 'C:\_bzl_disk', $env:RUNNER_TEMP, $env:GITHUB_WORKSPACE)
+          Add-MpPreference -ExclusionPath $paths -ErrorAction SilentlyContinue
+
+      - name: Compute Bazel paths
+        shell: bash
+        run: echo "REPO_CONTENTS_DIR=$(cygpath -m "$RUNNER_TEMP")/bazel-repo-contents" >> "$GITHUB_ENV"
+
+      - name: Set up Bazel
+        uses: bazel-contrib/setup-bazel@104e3eea9447cdaa4b00d0fb46191a3985d26ab3 # 0.19.1
+        with:
+          bazelisk-cache: true
+          disk-cache: false
+          repository-cache: true
+          cache-version: "2"
+          cache-save: false
+          bazelrc: |
+            startup --output_user_root=C:/_bzl
+            build --disk_cache=${{ env.DISK_CACHE_DIR }}
+            common --repo_contents_cache=${{ env.REPO_CONTENTS_DIR }}
+            common --config=ci
+
+      # Read-only: reuse main's native cache for this host.
+      - name: Restore disk cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ env.DISK_CACHE_DIR }}
+          key: bazel-disk-v2-${{ matrix.host }}-${{ matrix.host }}-bisect-${{ github.sha }}
+          restore-keys: |
+            bazel-disk-v2-${{ matrix.host }}-${{ matrix.host }}-
+
+      - name: Run variants
+        shell: bash
+        run: |
+          bazel test //tests/bisect/... --runs_per_test=30 --keep_going \
+            --test_output=summary --test_summary=detailed || true
+
+      - name: Summarise
+        if: always()
+        shell: bash
+        run: |
+          for d in bazel-testlogs/tests/bisect/*/; do
+            name=$(basename "$d")
+            total=$(find "$d" -name test.log | wc -l)
+            smashed=$(grep -l "stack smashing" $(find "$d" -name test.log) 2>/dev/null | wc -l)
+            failed=$(find "$d" -name test.xml -exec grep -l '<failure' {} + 2>/dev/null | wc -l)
+            echo "$name: runs=$total failed=$failed stack_smashing=$smashed" | tee -a "$GITHUB_STEP_SUMMARY"
+          done
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: bisect-${{ matrix.host }}
+          path: bazel-testlogs/tests/bisect/**/test.log
+          if-no-files-found: ignore

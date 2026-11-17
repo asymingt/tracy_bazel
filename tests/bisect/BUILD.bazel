@@ -1,0 +1,38 @@
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load(
+    ":defs.bzl",
+    "baseline_test",
+    "no_callstack_test",
+    "no_context_switch_test",
+    "no_crash_handler_test",
+    "no_frame_image_test",
+    "no_sampling_test",
+    "no_system_tracing_test",
+)
+
+cc_library(
+    name = "c_api",
+    srcs = ["c_api.c"],
+    deps = ["@tracy//:headers"],
+)
+
+[
+    rule(
+        name = name,
+        srcs = ["enabled_test.cc"],
+        env = {"TRACY_NO_INVARIANT_CHECK": "1"},
+        deps = [
+            ":c_api",
+            "@tracy//:client",
+        ],
+    )
+    for name, rule in [
+        ("baseline", baseline_test),
+        ("no_sampling", no_sampling_test),
+        ("no_system_tracing", no_system_tracing_test),
+        ("no_context_switch", no_context_switch_test),
+        ("no_callstack", no_callstack_test),
+        ("no_crash_handler", no_crash_handler_test),
+        ("no_frame_image", no_frame_image_test),
+    ]
+]
