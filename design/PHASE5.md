@@ -87,9 +87,12 @@ workspace in a maintainable state, using what the Qt workspace learned in
      TSan.
 4. **Bazel `last_rc`.** The stage in `pull_request.yaml` runs once the 9.x
    stage is green. The README embeds the status matrix for both stages.
-5. **Pruning.** `@llvm` was updated to 0.8.27, which needs none of the
-   qt_bazel_workspace patches, so `patches/llvm/` is gone. The only root
-   patch left is `patches/curl/windows_mingw.patch` (REVIEW F1).
+5. **Pruning.** `@llvm` was updated to 0.8.27, which drops all but one of the
+   earlier `@llvm` patches. The first Windows-host cross run showed that
+   `windows_pkg_dir_symlinks.patch` (shared with qt_bazel_workspace) is still
+   needed for Windows -> macOS, and that Windows -> Linux needs
+   `--nointerface_shared_objects` so long `.so` links use a `@params` file.
+   Root-only items are listed in REVIEW F1.
 6. **Windows icon and manifest:** deferred, because `rules_cc` has no portable
    resource-compiler action (REVIEW, "Deferred").
 7. **Bugs found and fixed along the way:**

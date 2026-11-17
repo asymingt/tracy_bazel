@@ -56,6 +56,8 @@ should go to the BCR as fixes to the respective modules:
 | `patches/curl/windows_mingw.patch` | BCR `curl` uses `/D` defines and `-DEFAULTLIB:` only | Use `-D` (cl.exe accepts it) and add `-l` libs |
 | `-lgdi32 -luser32 -lshell32` in `imgui//backends:platform-glfw` | BCR `glfw` links Win32 libs with `-DEFAULTLIB:` only | Same, in glfw |
 | `-lpthread` in `tracy//profiler` (Windows) | BCR `boringssl` uses pthreads under MinGW but never links them | `linkopts = ["-lpthread"]` for MinGW in boringssl |
+| `patches/llvm/windows_pkg_dir_symlinks.patch` | `@llvm`'s macOS SDK extraction on a Windows host leaves framework directory symlinks untraversable | Shared with qt_bazel_workspace; to send to `@llvm` |
+| `.bazelrc` `--nointerface_shared_objects` (Windows host) | rules_cc does not use a link `@params` file for non-Windows shared libraries that emit an interface library | Report to rules_cc (or have `@llvm` only emit `.ifso` where params files are not needed) |
 | `.bazelrc` bison/m4 `per_file_copt` | `rules_bison`/`rules_m4` gnulib config for MinGW exec | (from qt_bazel_workspace; in their queue) |
 
 ### F2. Patches carried, with upstream status

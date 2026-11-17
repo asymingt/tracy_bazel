@@ -57,7 +57,10 @@ cc_library(
     srcs = glob([
         "*.c",
         "*.h",
-    ]) + glob(
+    ]) + [
+        # Private; TriCoreInstPrinter.c includes it as <platform.h>.
+        "include/platform.h",
+    ] + glob(
         [
             "arch/%s/*.%s" % (arch, ext)
             for arch in _ARCHS

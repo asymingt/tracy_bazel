@@ -53,9 +53,13 @@ common:macos --action_env=PATH=/bin:/usr/bin:/usr/local/bin
 common:macos --host_action_env=PATH=/bin:/usr/bin:/usr/local/bin
 
 # Windows' CreateProcessW caps command lines at 32767 chars; route compiler
-# args via @params files. The feature is defined by the patched @llvm
-# toolchain (patches/llvm/windows_compiler_param_file.patch).
+# args via @params files (feature defined by @llvm).
 build:windows --features=compiler_param_file
+# The same limit for links: rules_cc never moves a non-Windows shared-library
+# link into a params file when it also emits an interface library (.ifso), so
+# e.g. libx11.so for a Linux target overflows on a Windows host. Interface
+# libraries only save relinks; Windows DLL import libraries are unaffected.
+build:windows --nointerface_shared_objects
 
 # rules_bison and rules_m4 (used by xkbcommon, via glfw) ship a gnulib Windows
 # configuration written for MSVC. When cross-compiling Linux targets from a

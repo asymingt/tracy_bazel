@@ -3,7 +3,7 @@
     "strip_prefix": "capstone-6.0.0-Alpha11",
     "url": "https://github.com/capstone-engine/capstone/archive/refs/tags/6.0.0-Alpha11.tar.gz",
     "overlay": {
-        "BUILD.bazel": "sha256-5BmXngmUuoFR4/PpyXwp5t02pndLEyf8SS26fByWY94=",
+        "BUILD.bazel": "sha256-+rq9h3XA2kxO/VrojkhtLk/KDH37gVGY8uZNFZ6jZa8=",
         "MODULE.bazel": "sha256-q0Oel426MhJbsjvAAwNzMf9n6oOaMaIYzjOKls+sRkQ="
     }
 }

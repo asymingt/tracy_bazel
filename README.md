@@ -173,13 +173,19 @@ Not provided, because they need libraries this module does not package:
 
 The module itself is plain `rules_cc` and builds with any C++17 toolchain.
 This workspace builds and tests it with the hermetic `@llvm` toolchain
-(Clang + libc++; MinGW sysroot on Windows), with the same `@llvm` version and
-patches as `qt_bazel_workspace` plus:
+(Clang + libc++; MinGW sysroot on Windows), version 0.8.27, with one patch
+shared with `qt_bazel_workspace`:
 
-- `patches/llvm/windows_static_libcxxabi_no_exports.patch`: stops the static
-  Windows libc++abi from carrying `dllexport` directives. Without it, every DLL
-  re-exports `std::terminate`, `operator new`, ... and linking a second DLL
-  against the first fails in lld with "std::terminate() was replaced".
+- `patches/llvm/windows_pkg_dir_symlinks.patch`: on a Windows host the macOS
+  SDK's framework directory symlinks (`Foo.framework/Headers ->
+  Versions/Current/Headers`) come out of the archive as file symlinks that
+  cannot be traversed, so Windows -> macOS cross builds cannot find
+  `<AppKit/AppKit.h>`. The patch recreates them as directory symlinks.
+
+`.bazelrc` also sets `--nointerface_shared_objects` on Windows hosts: rules_cc
+never moves a non-Windows shared-library link into a `@params` file when the
+link also writes an interface library, so linking e.g. `libx11.so` for a Linux
+target exceeds Windows' 32767-character command-line limit.
 
 With the MinGW toolchain, `cc_shared_library` names its output `lib<name>.so`
 by default, which lld's `-l<name>` lookup does not find. Give Windows DLLs an

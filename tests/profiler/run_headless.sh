@@ -11,7 +11,9 @@ profiler="$1"
 backend="$2"
 seconds=8
 
-runtime="$(mktemp -d "${TEST_TMPDIR:-/tmp}/xdg.XXXXXX")"
+# Not under TEST_TMPDIR: sway's IPC socket path must fit in sun_path (108
+# bytes), and Bazel's test temp paths are longer than that.
+runtime="$(mktemp -d /tmp/tracy-xdg.XXXXXX)"
 chmod 700 "$runtime"
 export XDG_RUNTIME_DIR="$runtime"
 export HOME="${TEST_TMPDIR:-$runtime}"
@@ -20,7 +22,7 @@ export LIBGL_ALWAYS_SOFTWARE=1
 unset WAYLAND_DISPLAY DISPLAY XDG_SESSION_TYPE
 
 server_pid=""
-cleanup() { [ -n "$server_pid" ] && kill "$server_pid" 2>/dev/null; }
+cleanup() { [ -n "$server_pid" ] && kill "$server_pid" 2>/dev/null; rm -rf "$runtime"; }
 trap cleanup EXIT
 
 case "$backend" in
