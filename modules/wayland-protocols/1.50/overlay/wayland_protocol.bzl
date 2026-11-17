@@ -21,7 +21,11 @@ load("@rules_cc//cc:cc_library.bzl", "cc_library")
 
 def _wayland_scanner_impl(ctx):
     outputs = []
-    for mode, out in [("client-header", ctx.outputs.header), ("private-code", ctx.outputs.code)]:
+    # public-code, not private-code: private-code gives the interface symbols
+    # hidden visibility, which breaks as soon as the generated library and its
+    # user end up in different shared objects (e.g. Bazel's dynamically linked
+    # tests).
+    for mode, out in [("client-header", ctx.outputs.header), ("public-code", ctx.outputs.code)]:
         ctx.actions.run(
             executable = ctx.executable._scanner,
             arguments = [mode, ctx.file.src.path, out.path],

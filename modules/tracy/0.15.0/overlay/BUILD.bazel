@@ -22,7 +22,11 @@ license(
     license_text = "public/libbacktrace/LICENSE",
 )
 
-exports_files(["LICENSE"])
+exports_files([
+    "LICENSE",
+    # Compiled into tracy-profiler with --@tracy//config:self_profile.
+    "public/TracyClient.cpp",
+])
 
 # ---------------------------------------------------------------------------
 # Instrumentation client
@@ -63,6 +67,14 @@ _CLIENT_DEFINES = select({
     "//conditions:default": [],
 })
 
+# See bazel/mingw_stack_guard.c (issue: intermittent "stack smashing
+# detected" when Tracy's static profiler starts threads before mingw-w64 has
+# initialised __stack_chk_guard). Compiles to nothing elsewhere.
+_MINGW_STACK_GUARD = select({
+    "@platforms//os:windows": ["bazel/mingw_stack_guard.c"],
+    "//conditions:default": [],
+})
+
 _CLIENT_LINKOPTS = select({
     "@platforms//os:linux": [
         "-lpthread",
@@ -86,7 +98,7 @@ cc_library(
     defines = _CLIENT_DEFINES,
     includes = ["public"],
     textual_hdrs = _TEXTUAL_HDRS + ["public/TracyClient.cpp"],
-    visibility = ["//visibility:private"],
+    visibility = ["//profiler:__pkg__"],
 )
 
 # Header-only view of the API with the configured defines. Lets a library be
@@ -104,7 +116,7 @@ cc_library(
 # profiler.
 cc_library(
     name = "client",
-    srcs = ["public/TracyClient.cpp"],
+    srcs = ["public/TracyClient.cpp"] + _MINGW_STACK_GUARD,
     applicable_licenses = [
         ":license",
         ":libbacktrace_license",
@@ -120,7 +132,7 @@ cc_library(
 # link.
 cc_library(
     name = "client_dynamic",
-    srcs = ["public/TracyClient.cpp"],
+    srcs = ["public/TracyClient.cpp"] + _MINGW_STACK_GUARD,
     applicable_licenses = [
         ":license",
         ":libbacktrace_license",
@@ -204,7 +216,7 @@ cc_library(
     local_defines = _TOOL_DEFINES,
     # tracy_lz4hc.cpp #includes tracy_lz4.cpp.
     textual_hdrs = ["public/common/tracy_lz4.cpp"],
-    visibility = ["//visibility:private"],
+    visibility = ["//profiler:__pkg__"],
 )
 
 [
@@ -251,7 +263,7 @@ cc_library(
     name = "git_ref",
     hdrs = [":git_ref_hpp"],
     includes = ["git_ref"],
-    visibility = ["//visibility:private"],
+    visibility = ["//profiler:__pkg__"],
 )
 
 cc_library(
@@ -265,7 +277,7 @@ cc_library(
     name = "dtl",
     hdrs = glob(["dtl/**/*.hpp"]),
     includes = ["dtl"],
-    visibility = ["//visibility:private"],
+    visibility = ["//profiler:__pkg__"],
 )
 
 # cmake/util.cmake (TracyUtil), used by the capture tools.
@@ -359,6 +371,17 @@ _TOOLS = {
     )
     for name in _TOOLS.keys() + ["tracy-monitor"]
 ]
+
+# The GUI lives in //profiler (see profiler/BUILD.bazel).
+alias(
+    name = "tracy-profiler",
+    actual = "//profiler:tracy-profiler",
+)
+
+alias(
+    name = "profiler",
+    actual = "//profiler:tracy-profiler",
+)
 
 # Linux-only perf-event sampling monitor. Like upstream, it compiles its own
 # client (TracyClient.cpp) with a fixed configuration, independent of the

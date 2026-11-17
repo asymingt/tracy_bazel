@@ -4,14 +4,9 @@ module(
     name = "tracy_workspace",
 )
 
-# Hermetic LLVM toolchain
-#
-# Same version and patch set as qt_bazel_workspace, so this workspace inherits
-# a host x target matrix that is already proven. Patches Tracy turns out not
-# to need are pruned in Phase 5 (design/PHASE5.md).
+# Hermetic LLVM toolchain (no local patches needed as of 0.8.27).
 
 bazel_dep(name = "llvm", version = "0.8.27")
-
 
 # Backends built into the from-source `@llvm-project` overlay (used for
 # `--@llvm//toolchain:bootstrap_stage=stage1_from_source`). Mirrors the CPUs we
@@ -55,6 +50,10 @@ osx.frameworks(
         "CoreText",
         "CoreVideo",
         "DiskArbitration",
+        # ApplicationServices' ATS.framework symlinks libFontParser.tbd and
+        # libType1Scaler.tbd into PrivateFrameworks/FontServices.framework; the
+        # darwin sandbox rejects the dangling links unless it is extracted too.
+        "FontServices",
         "Foundation",
         "IOKit",
         "IOSurface",
@@ -84,6 +83,17 @@ bazel_dep(name = "platforms", version = "1.1.0")
 bazel_dep(name = "rules_cc", version = "0.2.26")
 bazel_dep(name = "rules_license", version = "1.0.0")
 bazel_dep(name = "with_cfg.bzl", version = "1.1.0", dev_dependency = True)
+
+# Not a direct dependency (tracy-profiler -> curl), but overridden so curl's
+# Windows branch builds with the MinGW @llvm toolchain (it assumed MSVC's /D
+# and -DEFAULTLIB:). See patches/curl/.
+bazel_dep(name = "curl", version = "8.23.0")
+single_version_override(
+    module_name = "curl",
+    patch_strip = 1,
+    patches = ["//patches:curl/windows_mingw.patch"],
+    version = "8.23.0",
+)
 
 # Not direct dependencies (glfw/wayland -> libexpat, xkbcommon/... ->
 # rules_cc_autoconf), but pinned as in qt_bazel_workspace: wayland-scanner and

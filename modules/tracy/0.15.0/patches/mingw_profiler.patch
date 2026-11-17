@@ -1,0 +1,32 @@
+profiler: build with MinGW toolchains.
+
+- TracyStorage.cpp: include <errno.h> on every platform (ENOENT/EEXIST); MSVC
+  only gets it transitively.
+- TracyMarkdown.cpp: provide memmem() on _WIN32, not only _MSC_VER; MinGW's C
+  runtime lacks it too.
+
+diff --git a/profiler/src/profiler/TracyStorage.cpp b/profiler/src/profiler/TracyStorage.cpp
+--- a/profiler/src/profiler/TracyStorage.cpp
++++ b/profiler/src/profiler/TracyStorage.cpp
+@@ -14,8 +14,8 @@
+ #  include <dirent.h>
+ #  include <sys/types.h>
+ #  include <unistd.h>
+-#  include <errno.h>
+ #endif
++#include <errno.h>
+ #include <sys/stat.h>
+ 
+ #include "TracyStorage.hpp"
+diff --git a/profiler/src/profiler/TracyMarkdown.cpp b/profiler/src/profiler/TracyMarkdown.cpp
+--- a/profiler/src/profiler/TracyMarkdown.cpp
++++ b/profiler/src/profiler/TracyMarkdown.cpp
+@@ -15,7 +15,7 @@
+ #include "../Fonts.hpp"
+ 
+ 
+-#ifdef _MSC_VER
++#ifdef _WIN32  // neither MSVC's nor MinGW's C runtime provides memmem()
+ void* memmem( const void* haystack, size_t hsize, const char* needle, size_t nsize )
+ {
+     auto left = ptrdiff_t( hsize ) - ptrdiff_t( nsize );

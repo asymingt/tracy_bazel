@@ -5,6 +5,6 @@
     "overlay": {
         "BUILD.bazel": "sha256-9PlLddZHfGgwVBIK3ggkie/qd3HBhhqHkJ4x8bVGX1o=",
         "MODULE.bazel": "sha256-2zx34V0kImfNeuRzoPOP1LlKEYScVJNltBVwMcXlcOQ=",
-        "wayland_protocol.bzl": "sha256-rXt9jx2R0IKqX6GBs27aY0ZCSPtCV/gq/j3V9DchLCc="
+        "wayland_protocol.bzl": "sha256-XwPWiHFXHaOM/KzsHAVdy/94x44lh2sqgu8KNx5Ems4="
     }
 }
