@@ -22,6 +22,7 @@ tasks:
       - "@tracy//:tracy-import-fuchsia"
       - "@tracy//:tracy-update"
       - "@tracy//:tracy-merge"
+      - "@tracy//:tracy-profiler"
   verify_targets_enabled:
     name: Verify build targets (TRACY_ENABLE)
     platform: ${{ platform }}

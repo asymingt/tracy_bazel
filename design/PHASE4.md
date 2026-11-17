@@ -69,3 +69,71 @@ have a desktop session. Add it in Phase 5 if it turns out to be stable.
   that libwayland without core protocol v6 loses functionality).
 - curl and OpenSSL add sizeable build time to every GUI cell. Watch the CI
   disk-cache budget; it was the binding constraint in the Qt workspace.
+
+## 7. As built (2026-11-17)
+
+- **Package layout.** The GUI lives in the `//profiler` package of the
+  overlay (`@tracy//profiler:tracy-profiler`), with root aliases
+  `@tracy//:tracy-profiler` and `@tracy//:profiler`. The source list is
+  upstream's: `src/*.cpp`, `src/ini.c` and all of `src/profiler/*.cpp`
+  (glob verified against the CMake list). The backend is chosen by
+  `select()`.
+- **Flags** (`@tracy//config`):
+  - `linux_backend=wayland|x11`, which maps to upstream `LEGACY`;
+  - `no_fileselector`, which maps to upstream `NO_FILESELECTOR`;
+  - `self_profile`, which maps to upstream `SELF_PROFILE`.
+
+  `self_profile` compiles `public/TracyClient.cpp` into the binary with
+  `TRACY_ENABLE`, as upstream does.
+- **Embedding.**
+  - `profiler/embed.bzl` (`tracy_embed`) runs upstream's
+    `helpers/embed.cpp`, built for the execution platform, with no shell. It
+    produces `gen/data/<Name>.{cpp,hpp}` for the 8 fonts, 6 LLM files, 45
+    achievement texts and the manual.
+  - The achievement names are derived from the file names, matching upstream's
+    `Text<Name>`.
+  - The `Font Awesome 7 Free-Solid-900.otf` file name (with spaces) is fine
+    as a Bazel 9 label.
+- **Manual.** It is checked in at `overlay/profiler/generated/tracy.md`.
+  `tools/regen_manual.sh` regenerates it with upstream's pinned pandoc 3.12.1
+  (SHA-256 checked) and `manual/latex2md.py`, with `SOURCE_DATE_EPOCH` pinned
+  to the v0.15.0 release date so the output is byte-reproducible (the manual's
+  `\today` otherwise changes daily). The build needs no pandoc and no Python.
+- **New tracy patches.**
+  - `embed_include_basename.patch`: the generated `.cpp` includes its header by
+    file name rather than by the full output path.
+  - `libcxx_atomic_shared_ptr.patch`: libc++ (LLVM 21 and Apple's) does not
+    implement `std::atomic<std::shared_ptr<T>>`, so this falls back to the
+    C++11 free functions when `__cpp_lib_atomic_shared_ptr` is not defined.
+  - `mingw_profiler.patch`: includes `<errno.h>` everywhere, and provides
+    `memmem()` on `_WIN32`, not only `_MSC_VER`.
+- **Root-only workarounds for the MinGW toolchain**, both candidates to send to
+  the BCR:
+  - `patches/curl/windows_mingw.patch`: `-D` instead of `/D`, plus `-l`
+    libraries next to `-DEFAULTLIB:`.
+  - `-lpthread` on Windows: under MinGW, BCR BoringSSL uses winpthreads
+    (`crypto/internal.h`), which the `@llvm` MinGW runtime ships as
+    `libpthread.a`.
+- **macOS:** `FontServices` joins `osx.frameworks`. `ApplicationServices`'
+  `ATS.framework` symlinks two `.tbd` files into
+  `PrivateFrameworks/FontServices.framework`, and the darwin sandbox rejects
+  the dangling links.
+- **Issue #1 (Windows "stack smashing detected").**
+  - The Windows bisect showed every option variant failing 25–55% of runs, so
+    the cause is not a Tracy feature.
+  - Root cause: mingw-w64 initialises `__stack_chk_guard` in a
+    default-priority constructor, while Tracy's static profiler object starts
+    worker threads during C++ static initialisation. Frames entered before the
+    guard is randomised fail their check on return.
+  - `bazel/mingw_stack_guard.c` (Windows only, compiled into `:client` and
+    `:client_dynamic`) initialises the guard identically from a priority-101
+    constructor, so the runtime's own initialiser then leaves it alone.
+- **Tests** (`tests/profiler`):
+  - `profiler_build_test` builds the GUI in every matrix cell.
+  - `headless_{wayland,x11}_test` are `manual` and run by a dedicated Linux CI
+    step that installs weston, Xvfb, Mesa and the X client libraries. Each
+    starts the profiler under `weston --backend=headless` or Xvfb with
+    `LIBGL_ALWAYS_SOFTWARE=1`, and requires it to still be running after 8 s.
+  - Locally, the Wayland build ran for 6 s on a real GNOME/Wayland session,
+    and the GLFW build ran as well. GLFW 3.4 picks its Wayland platform there
+    whenever `WAYLAND_DISPLAY` is set, which is upstream GLFW behaviour.

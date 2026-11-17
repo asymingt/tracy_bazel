@@ -3,7 +3,7 @@
     "strip_prefix": "tracy-0.15.0",
     "url": "https://github.com/wolfpld/tracy/archive/refs/tags/v0.15.0.tar.gz",
     "overlay": {
-        "BUILD.bazel": "sha256-N2QXM1V/UEJhwQ+t9XF9FrATjf51Nk9UYTaw8WkkyhM=",
+        "BUILD.bazel": "sha256-8+iVjdc7Jemwn7xT2h5oUKZIibzMqTCyX4/qUTjkKq0=",
         "MODULE.bazel": "sha256-u3Qc3Y83B2FrGZeRZdllz/3htl6RyuTSpJr6GGx41MY=",
         "bazel/mingw_stack_guard.c": "sha256-AV3g32gwK0/zuBCMF9gg5qi9bfuJFm7gl7AEvajwdQ0=",
         "config/BUILD.bazel": "sha256-zAZAwSpU8tYBoPyW2lhsmpOP9q7UGyOjWmqR1/5ZwN8=",

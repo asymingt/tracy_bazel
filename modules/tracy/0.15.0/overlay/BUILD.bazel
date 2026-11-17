@@ -70,10 +70,17 @@ _CLIENT_DEFINES = select({
 # See bazel/mingw_stack_guard.c (issue: intermittent "stack smashing
 # detected" when Tracy's static profiler starts threads before mingw-w64 has
 # initialised __stack_chk_guard). Compiles to nothing elsewhere.
-_MINGW_STACK_GUARD = select({
-    "@platforms//os:windows": ["bazel/mingw_stack_guard.c"],
-    "//conditions:default": [],
-})
+# alwayslink: nothing references the file's only symbol (a constructor), so
+# without it the linker would never pull the object out of the archive.
+cc_library(
+    name = "mingw_stack_guard",
+    srcs = select({
+        "@platforms//os:windows": ["bazel/mingw_stack_guard.c"],
+        "//conditions:default": [],
+    }),
+    alwayslink = True,
+    visibility = ["//visibility:private"],
+)
 
 _CLIENT_LINKOPTS = select({
     "@platforms//os:linux": [
@@ -116,13 +123,16 @@ cc_library(
 # profiler.
 cc_library(
     name = "client",
-    srcs = ["public/TracyClient.cpp"] + _MINGW_STACK_GUARD,
+    srcs = ["public/TracyClient.cpp"],
     applicable_licenses = [
         ":license",
         ":libbacktrace_license",
     ],
     linkopts = _CLIENT_LINKOPTS,
-    deps = [":headers"],
+    deps = [
+        ":headers",
+        ":mingw_stack_guard",
+    ],
 )
 
 # Client for use through :client_shared. Depend on this target and add
@@ -132,7 +142,7 @@ cc_library(
 # link.
 cc_library(
     name = "client_dynamic",
-    srcs = ["public/TracyClient.cpp"] + _MINGW_STACK_GUARD,
+    srcs = ["public/TracyClient.cpp"],
     applicable_licenses = [
         ":license",
         ":libbacktrace_license",
@@ -140,7 +150,10 @@ cc_library(
     defines = ["TRACY_IMPORTS"],
     linkopts = _CLIENT_LINKOPTS,
     local_defines = ["TRACY_EXPORTS"],
-    deps = [":headers"],
+    deps = [
+        ":headers",
+        ":mingw_stack_guard",
+    ],
 )
 
 cc_shared_library(
