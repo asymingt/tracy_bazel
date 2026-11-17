@@ -7,7 +7,7 @@ build_test(
     targets = ["@tracy//:tracy-profiler"],
 )
 
-# Start the GUI under a headless display server. Need weston / Xvfb and Mesa
+# Start the GUI under a headless display server. Need sway / Xvfb and Mesa
 # on the host, so they are `manual` and run explicitly by Linux CI.
 _HEADLESS_TAGS = [
     "local",

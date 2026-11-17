@@ -3,7 +3,7 @@
     "strip_prefix": "nativefiledialog-extended-1.4.1",
     "url": "https://github.com/btzy/nativefiledialog-extended/archive/refs/tags/v1.4.1.tar.gz",
     "overlay": {
-        "BUILD.bazel": "sha256-Evdlo4zMj+TGqRUvP5igoUh2NQbabcD2B7ja5fhgyBk=",
+        "BUILD.bazel": "sha256-dlYr8MXC1lgwdTkHgA262OiusaDcEOwq+K9sD6xXbuw=",
         "MODULE.bazel": "sha256-X4Y0z+jZbpZsQvNFPS+M3UvQr6WRymoWZMacx5hJpqQ="
     },
     "patches": {

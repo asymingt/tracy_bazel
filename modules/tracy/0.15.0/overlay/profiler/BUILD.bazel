@@ -7,6 +7,10 @@
 # --@tracy//config:linux_backend=x11, GLFW everywhere else. GL and the
 # compositor/X server are loaded from the host at run time.
 
+# Windows libraries are listed twice: -DEFAULTLIB:<lib>.lib for MSVC's link.exe
+# (which ignores -l with warning LNK4044) and -l<lib> for MinGW drivers
+# (which ignore -DEFAULTLIB).
+
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@wayland-protocols//:wayland_protocol.bzl", "wayland_client_protocol")
@@ -182,12 +186,19 @@ cc_binary(
             # the @llvm MinGW runtime provides a static winpthreads as -lpthread.
             "-lpthread",
             "-lws2_32",
+            "-DEFAULTLIB:ws2_32.lib",
             "-ladvapi32",
+            "-DEFAULTLIB:advapi32.lib",
             "-ldbghelp",
+            "-DEFAULTLIB:dbghelp.lib",
             "-lole32",
+            "-DEFAULTLIB:ole32.lib",
             "-lshell32",
+            "-DEFAULTLIB:shell32.lib",
             "-luser32",
+            "-DEFAULTLIB:user32.lib",
             "-lgdi32",
+            "-DEFAULTLIB:gdi32.lib",
         ],
         "//conditions:default": [],
     }),

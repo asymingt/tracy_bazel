@@ -3,12 +3,12 @@
     "strip_prefix": "tracy-0.15.0",
     "url": "https://github.com/wolfpld/tracy/archive/refs/tags/v0.15.0.tar.gz",
     "overlay": {
-        "BUILD.bazel": "sha256-8+iVjdc7Jemwn7xT2h5oUKZIibzMqTCyX4/qUTjkKq0=",
+        "BUILD.bazel": "sha256-VIGYxOiz5WcgbjCxXhkAwiGnuUIDCu4R6/HvLbUD1IY=",
         "MODULE.bazel": "sha256-u3Qc3Y83B2FrGZeRZdllz/3htl6RyuTSpJr6GGx41MY=",
         "bazel/mingw_stack_guard.c": "sha256-AV3g32gwK0/zuBCMF9gg5qi9bfuJFm7gl7AEvajwdQ0=",
         "config/BUILD.bazel": "sha256-zAZAwSpU8tYBoPyW2lhsmpOP9q7UGyOjWmqR1/5ZwN8=",
         "config/tracy_config.bzl": "sha256-3iw9AxXRmMnISbTwhW11NAEE0vhOjQbKwMLAhad6/Kw=",
-        "profiler/BUILD.bazel": "sha256-TlQURTyeOhnYutpYqgI8VvA0A+DbH0OyMjzom1gXdq0=",
+        "profiler/BUILD.bazel": "sha256-TB0zDcDP51NE7nYhi5pr53BnyB8KIwuLxy1goLgU/8k=",
         "profiler/embed.bzl": "sha256-iqyQMu13EbBsEhc9R+JBh/GhfFzkIy5zWmUyAskbKIw=",
         "profiler/generated/tracy.md": "sha256-chP4L2SjpIn99NQFcz7tyZYPTcU1+Pc821Dvu4OyOYE="
     },
@@ -16,7 +16,8 @@
         "embed_include_basename.patch": "sha256-MBWpHxsQygs5L7krGi9UlxBRWDargWe2x/gTzGtnB+o=",
         "libcxx_atomic_shared_ptr.patch": "sha256-DcBkIZ8E5F+dwXpHxrg71paHBZLiJ/f+DTbTUh2biN8=",
         "mingw_arm64_cntvct.patch": "sha256-pDVh3CNIXtkr82Pb59uAMLXhZ+bnBmtYJfImODauSTU=",
-        "mingw_profiler.patch": "sha256-0MqX99fwvqhfyhd7522ixjbPG/cyatTIavKPRCzY33A="
+        "mingw_profiler.patch": "sha256-0MqX99fwvqhfyhd7522ixjbPG/cyatTIavKPRCzY33A=",
+        "windows_safe_file_write.patch": "sha256-iAtGOKyLRUI85U0jujNhr71Ms/ScVBvOX015nHjTEXc="
     },
     "patch_strip": 1
 }

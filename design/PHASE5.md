@@ -60,3 +60,45 @@ workspace in a maintainable state, using what the Qt workspace learned in
 - The REVIEW.md findings are all resolved or explicitly accepted.
 - The outside-workspace build is green.
 - BCR PRs are filed for every module, with presubmit passing.
+
+## 5. As built (2026-11-17)
+
+1. **Review.** `design/REVIEW.md` records the full checklist:
+   - no canonical labels;
+   - every repo label is a `bazel_dep`;
+   - licenses exist upstream;
+   - metadata and hashes are consistent.
+
+   It also has findings F1 to F6.
+2. **Build from outside the workspace.** `.github/workflows/consumer.yaml`
+   builds a fresh workspace on Ubuntu (GCC), macOS (Apple clang) and Windows
+   (MSVC). It uses this checkout as a registry and the host toolchain, with no
+   flags or overrides from this repo, and builds the client, the CLI tools and
+   the GUI. GCC and Apple clang passed on the first run. MSVC exposed MinGW-only
+   `-l` link flags, so every Windows link list in the overlays now carries both
+   `-DEFAULTLIB:<lib>.lib` and `-l<lib>`.
+3. **Sanitizers** (Linux):
+   - ASan, UBSan and TSan are clean on the client, tools, ppqsort and base64
+     tests.
+   - The exceptions are upstream behaviours, documented in REVIEW F6 and
+     tagged `noasan`/`noubsan`/`notsan`: ODR noise from the toolchain linking
+     libc++ twice under ASan; unaligned `MemRead` and vendor DWARF tags under
+     UBSan; Tracy's lock-free client internals and PPQSort's partition under
+     TSan.
+4. **Bazel `last_rc`.** The stage in `pull_request.yaml` runs once the 9.x
+   stage is green. The README embeds the status matrix for both stages.
+5. **Pruning.** `@llvm` was updated to 0.8.27, which needs none of the
+   qt_bazel_workspace patches, so `patches/llvm/` is gone. The only root
+   patch left is `patches/curl/windows_mingw.patch` (REVIEW F1).
+6. **Windows icon and manifest:** deferred, because `rules_cc` has no portable
+   resource-compiler action (REVIEW, "Deferred").
+7. **Bugs found and fixed along the way:**
+   - **#1:** the MinGW stack-guard initialisation race. It was diagnosed from a
+     symbolised CI backtrace and is verified 40/40 on Windows.
+   - **`windows_safe_file_write.patch`:** `SafeFileWrite::Commit()` renamed a
+     still-open file, which fails on Windows (MSVC as well). It broke
+     `tracy-update` and `tracy-merge` there, and was found by the end-to-end
+     test on the Windows CI runners.
+8. **BCR submission** (leaf-first order in REVIEW) waits on the maintainer:
+   - the go-ahead for an outward-facing action, and
+   - the `imgui` naming decision (REVIEW F3).

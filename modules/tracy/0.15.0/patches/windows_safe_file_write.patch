@@ -1,0 +1,35 @@
+SafeFileWrite::Commit(): close the temporary file before renaming it.
+
+FileWrite only closes its FILE* in the destructor, so Commit() renamed a file
+that was still open. That works on POSIX but fails on Windows (MSVC and MinGW
+alike), where tracy-update and tracy-merge then report "Cannot finalize output
+file!". The compression statistics are cached for callers that query them
+after Commit().
+
+diff --git a/server/TracySafeFileWrite.hpp b/server/TracySafeFileWrite.hpp
+--- a/server/TracySafeFileWrite.hpp
++++ b/server/TracySafeFileWrite.hpp
+@@ -28,10 +28,14 @@
+     SafeFileWrite& operator=( const SafeFileWrite& ) = delete;
+ 
+     FileWrite& File() { return *m_file; }
+-    std::pair<size_t, size_t> GetCompressionStatistics() const { return m_file->GetCompressionStatistics(); }
++    std::pair<size_t, size_t> GetCompressionStatistics() const { return m_file ? m_file->GetCompressionStatistics() : m_stats; }
+ 
+     bool Commit()
+     {
++        // Close the temporary file before renaming it: Windows cannot rename a
++        // file that is still open (FileWrite only closes it in its destructor).
++        m_stats = m_file->GetCompressionStatistics();
++        m_file.reset();
+         std::error_code ec;
+         std::filesystem::rename( m_tmp, m_final, ec );
+         return !ec;
+@@ -45,6 +49,7 @@
+     {}
+ 
+     std::unique_ptr<FileWrite> m_file;
++    std::pair<size_t, size_t> m_stats {};
+     std::string m_final, m_tmp;
+ };
+ 

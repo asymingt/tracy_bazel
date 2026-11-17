@@ -53,6 +53,15 @@ _E2E_TOOLS = [
 # no_broadcast), so the test can pick its port before starting the profiler.
 tracy_manual_lifetime_cc_test(
     name = "e2e_test",
+    # Upstream Tracy trips UBSan here by design: tracy::MemRead<T>() memcpy()s
+    # unaligned protocol data through a typed pointer (TracyAlign.hpp), and the
+    # bundled libbacktrace loads vendor DWARF tags (e.g. 0x4107) into
+    # enum dwarf_tag. TSan reports races in Tracy's lock-free client
+    # internals (thread-name list, rpmalloc deferred frees). See design/REVIEW.md.
+    tags = [
+        "notsan",
+        "noubsan",
+    ],
     srcs = ["e2e_test.cc"],
     args = ["$(rlocationpath @tracy//:%s)" % tool for tool in _E2E_TOOLS],
     data = ["@tracy//:" + tool for tool in _E2E_TOOLS],

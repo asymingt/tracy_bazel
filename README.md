@@ -27,7 +27,7 @@ plan and phasing are in [`design/`](design/OVERVIEW.md).
 | [2](design/PHASE2.md) | Server library + CLI tools (`tracy-capture`, `tracy-csvexport`, ...) | done |
 | [3](design/PHASE3.md) | GUI dependency modules | done |
 | [4](design/PHASE4.md) | GUI profiler (`tracy-profiler`) | done |
-| [5](design/PHASE5.md) | Hardening + BCR upstreaming | planned |
+| [5](design/PHASE5.md) | Hardening + BCR upstreaming | done, except filing the BCR PRs (see [REVIEW](design/REVIEW.md)) |
 
 Latest `main` build, by host (rows) and target (columns), on Bazel 9.x and on
 Bazel's latest release candidate. The diagonal is a native build plus the

@@ -66,6 +66,7 @@ should go to the BCR as fixes to the respective modules:
 | `tracy` | `embed_include_basename.patch` | to send (build-system-agnostic embed) |
 | `tracy` | `libcxx_atomic_shared_ptr.patch` | to send (libc++ lacks P0718) |
 | `tracy` | `mingw_profiler.patch` | to send (`errno.h`, `memmem`) |
+| `tracy` | `windows_safe_file_write.patch` | to send (rename of an open file fails on Windows; affects MSVC too) |
 | `ppqsort` | `counting_semaphore.patch` | Tracy's fix; to send to GabTux/PPQSort |
 | `ppqsort` | `no_execution_header.patch` | to send (unused include pulls in TBB) |
 | `nativefiledialog-extended` | `xdg_foreign_v2.patch` | Tracy's; to send to btzy/nativefiledialog-extended |
@@ -95,10 +96,45 @@ issue.
 
 ### F5. Issue #1: MinGW stack-protector guard initialisation order
 
-Fixed in the module (`bazel/mingw_stack_guard.c`). The root cause is in
+Fixed in the module (`bazel/mingw_stack_guard.c`, `alwayslink`). It was
+diagnosed from a symbolised CI backtrace: the abort happens in
+`tracy::__wsinit` (`WSAStartup`), reached from the worker thread's
+`GetHostInfo()`. Verified 40/40 on windows-amd64 and windows-arm64, against
+31/40 failures before the fix. The root cause is in
 mingw-w64: the guard is initialised from a default-priority constructor. It is
 worth reporting there and to the `@llvm` toolchain, since any program that
 starts threads from a static initialiser is affected.
+
+### F6. Sanitizers (Linux, `--config=asan|ubsan|tsan`)
+
+Run over `tests/{client,tools,ppqsort,base64}`:
+
+- **ASan:** clean, except `shared_two_dso_test`. The toolchain links libc++
+  statically into `libTracyClient.so` while the executable uses
+  `libc++.so.1`, and ASan reports the duplicated libc++ globals as an ODR
+  violation. That is a linking artefact of the sanitizer configuration, so the
+  test is tagged `noasan`.
+- **UBSan:** clean, except `e2e_test`, which exercises Tracy's wire protocol
+  and symbol resolution. Both findings are upstream:
+  - `tracy::MemRead<T>()` (`public/common/TracyAlign.hpp`) reads unaligned
+    data through a misaligned `const T*` before `memcpy`ing it.
+  - libbacktrace's `dwarf.cpp` stores vendor tags such as `DW_TAG` 0x4107 in
+    `enum dwarf_tag`.
+
+  The test is tagged `noubsan`; both are worth reporting upstream (the first
+  is fixed by taking `const void*`).
+- **TSan:** clean, except in upstream code that two tests drive hard (both
+  tagged `notsan`):
+  - `ppqsort_test`: races in `swap_blocks`
+    (`parallel/cpp/partition_par.h`), which synchronises through its own
+    atomic flags and `atomic_ref`.
+  - `e2e_test`: races in Tracy's lock-free client internals, namely the
+    thread-name list (`GetThreadNameData` vs `SetThreadNameWithHint`), the
+    bundled rpmalloc's deferred frees, and `Profiler::SendString`.
+
+  Worth reporting upstream; neither is introduced by the packaging. All other
+  client tests (static, shared, fibers, on-demand, manual lifetime) are
+  TSan-clean.
 
 ## Deferred (explicitly out of scope)
 

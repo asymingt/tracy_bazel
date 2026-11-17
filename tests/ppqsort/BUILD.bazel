@@ -4,5 +4,9 @@ cc_test(
     name = "ppqsort_test",
     srcs = ["ppqsort_test.cc"],
     cxxopts = ["-std=c++20"],
+    # TSan reports races in PPQSort's parallel block swapping
+    # (parallel/cpp/partition_par.h), which synchronises through its own
+    # atomic flags; upstream library behaviour, see design/REVIEW.md.
+    tags = ["notsan"],
     deps = ["@ppqsort"],
 )

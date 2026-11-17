@@ -216,7 +216,7 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends \
-            weston xvfb libegl1 libegl-mesa0 libgl1 libglx-mesa0 libgl1-mesa-dri \
+            sway xvfb libegl1 libegl-mesa0 libgl1 libglx-mesa0 libgl1-mesa-dri \
             libx11-6 libx11-xcb1 libxcursor1 libxrandr2 libxi6 libxinerama1 libxkbcommon0
           bazel test $PLATFORM_FLAG --test_output=all \
             //tests/profiler:headless_wayland_test //tests/profiler:headless_x11_test

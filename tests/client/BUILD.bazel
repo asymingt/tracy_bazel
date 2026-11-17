@@ -96,6 +96,11 @@ tracy_manual_lifetime_cc_test(
 
 tracy_enabled_cc_test(
     name = "shared_two_dso_test",
+    # Under --config=asan the toolchain links libc++ statically into
+    # libTracyClient.so while the executable uses libc++.so.1, and ASan reports
+    # the duplicated libc++ globals as an ODR violation (a toolchain linking
+    # artefact, not a Tracy bug).
+    tags = ["noasan"],
     srcs = ["shared_two_dso_test.cc"],
     dynamic_deps = [
         ":plugin_a_shared",

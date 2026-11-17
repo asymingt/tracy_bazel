@@ -4,6 +4,10 @@ load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_cc//cc:cc_shared_library.bzl", "cc_shared_library")
 load("@rules_license//rules:license.bzl", "license")
 
+# Windows libraries are listed twice: -DEFAULTLIB:<lib>.lib for MSVC's link.exe
+# (which ignores -l with warning LNK4044) and -l<lib> for MinGW drivers
+# (which ignore -DEFAULTLIB).
+
 package(
     default_applicable_licenses = [":license"],
     default_visibility = ["//visibility:public"],
@@ -89,10 +93,15 @@ _CLIENT_LINKOPTS = select({
     ],
     "@platforms//os:windows": [
         "-lws2_32",
+        "-DEFAULTLIB:ws2_32.lib",
         "-ldbghelp",
+        "-DEFAULTLIB:dbghelp.lib",
         "-lsecur32",
+        "-DEFAULTLIB:secur32.lib",
         "-ladvapi32",
+        "-DEFAULTLIB:advapi32.lib",
         "-luser32",
+        "-DEFAULTLIB:user32.lib",
     ],
     "//conditions:default": [],
 })
@@ -203,8 +212,11 @@ _TOOL_LINKOPTS = select({
     "@platforms//os:linux": ["-lpthread"],
     "@platforms//os:windows": [
         "-lws2_32",
+        "-DEFAULTLIB:ws2_32.lib",
         "-lsecur32",
+        "-DEFAULTLIB:secur32.lib",
         "-ladvapi32",
+        "-DEFAULTLIB:advapi32.lib",
     ],
     "//conditions:default": [],
 })
@@ -367,7 +379,10 @@ _TOOLS = {
         srcs = srcs,
         copts = _CXX20,
         linkopts = select({
-            "@platforms//os:windows": ["-ldbghelp"],
+            "@platforms//os:windows": [
+                "-ldbghelp",
+                "-DEFAULTLIB:dbghelp.lib",
+            ],
             "//conditions:default": [],
         }) if name == "tracy-update" else [],
         local_defines = _TOOL_DEFINES,

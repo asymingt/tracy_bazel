@@ -2,6 +2,10 @@
 # xdg-desktop-portal backend over D-Bus (upstream's NFD_PORTAL=ON), with X11
 # and Wayland parent-window support. The GTK backend is not provided.
 
+# Windows libraries are listed twice: -DEFAULTLIB:<lib>.lib for MSVC's link.exe
+# (which ignores -l with warning LNK4044) and -l<lib> for MinGW drivers
+# (which ignore -DEFAULTLIB).
+
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_cc//cc:objc_library.bzl", "objc_library")
 load("@rules_license//rules:license.bzl", "license")
@@ -68,8 +72,11 @@ cc_library(
     linkopts = select({
         "@platforms//os:windows": [
             "-lole32",
+            "-DEFAULTLIB:ole32.lib",
             "-luuid",
+            "-DEFAULTLIB:uuid.lib",
             "-lshell32",
+            "-DEFAULTLIB:shell32.lib",
         ],
         "//conditions:default": [],
     }),

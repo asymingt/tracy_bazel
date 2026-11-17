@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Starts tracy-profiler under a headless display server and checks that it is
 # still running (i.e. initialised its window, GL context and fonts) after a few
-# seconds. Linux only; needs weston (Wayland) or Xvfb (X11) plus Mesa on the
+# seconds. Linux only; needs sway (Wayland) or Xvfb (X11) plus Mesa on the
 # host -- see the "Headless profiler tests" step in .github/workflows/bazel.yaml.
 #
 # usage: run_headless.sh <tracy-profiler> wayland|x11
@@ -25,13 +25,22 @@ trap cleanup EXIT
 
 case "$backend" in
   wayland)
-    socket="tracy-test-$$"
-    /usr/bin/weston --backend=headless --renderer=pixman --socket="$socket" \
-      --idle-time=0 >"$runtime/server.log" 2>&1 &
+    # sway (wlroots) rather than weston: weston's headless backend exposes no
+    # wl_seat, and tracy-profiler refuses to start without one ("No wayland
+    # seat!"). wlroots always advertises seat0, even with no input devices.
+    : >"$runtime/sway.conf"
+    WLR_BACKENDS=headless WLR_RENDERER=pixman WLR_LIBINPUT_NO_DEVICES=1 \
+      /usr/bin/sway --unsupported-gpu --config "$runtime/sway.conf" \
+      >"$runtime/server.log" 2>&1 &
     server_pid=$!
+    socket=""
+    for _ in $(seq 100); do
+      socket="$(cd "$runtime" && ls wayland-* 2>/dev/null | grep -v '\.lock$' | head -1)"
+      [ -n "$socket" ] && [ -S "$runtime/$socket" ] && break
+      sleep 0.1
+    done
+    [ -n "$socket" ] || { echo "sway did not start:"; cat "$runtime/server.log"; exit 1; }
     export WAYLAND_DISPLAY="$socket"
-    for _ in $(seq 50); do [ -S "$runtime/$socket" ] && break; sleep 0.1; done
-    [ -S "$runtime/$socket" ] || { echo "weston did not start:"; cat "$runtime/server.log"; exit 1; }
     ;;
   x11)
     display=":$(( 90 + $$ % 900 ))"

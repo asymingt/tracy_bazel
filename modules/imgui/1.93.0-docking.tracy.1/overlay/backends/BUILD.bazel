@@ -1,5 +1,9 @@
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 
+# Windows libraries are listed twice: -DEFAULTLIB:<lib>.lib for MSVC's link.exe
+# (which ignores -l with warning LNK4044) and -l<lib> for MinGW drivers
+# (which ignore -DEFAULTLIB).
+
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = ["//visibility:public"],
@@ -16,8 +20,11 @@ cc_library(
     linkopts = select({
         "@platforms//os:windows": [
             "-lgdi32",
+            "-DEFAULTLIB:gdi32.lib",
             "-luser32",
+            "-DEFAULTLIB:user32.lib",
             "-lshell32",
+            "-DEFAULTLIB:shell32.lib",
         ],
         "//conditions:default": [],
     }),
