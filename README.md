@@ -126,6 +126,18 @@ native file dialog, and `--@tracy//config:self_profile` instruments the
 profiler itself. GL (and on Linux the compositor or X server) comes from the
 host at run time, as for any GL application.
 
+**GNOME on Wayland: no window borders.** The Wayland backend asks the
+compositor to draw window decorations (`xdg-decoration`), and GNOME does not
+support that protocol, so the window has no title bar or resize borders. This
+is upstream's intended behaviour (manual, "Window decorations"). Either move
+and resize with GNOME's shortcuts (Super + drag, Alt+F7 / Alt+F8), or run the
+X11 build through XWayland, where GNOME draws the borders. Clear
+`WAYLAND_DISPLAY`, since GLFW otherwise picks its Wayland platform:
+
+```
+WAYLAND_DISPLAY= bazel run @tracy//:tracy-profiler --@tracy//config:linux_backend=x11
+```
+
 ### Build settings (`--@tracy//config:<name>`)
 
 Each upstream CMake option `TRACY_<NAME>` is the flag `<name>`, with the
