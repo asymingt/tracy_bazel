@@ -24,8 +24,10 @@ Follows the checklist from qt_bazel_workspace's `design/REVIEW.md`.
   - `base64`: BSD-2-Clause;
   - `tidy-html5`: HTMLTIDY;
   - `usearch`: Apache-2.0;
-  - `wayland-protocols`: MIT;
-  - `dbus` and `libglvnd`: as in qt_bazel_workspace.
+  - `wayland-protocols`: MIT.
+
+  (`dbus` and `libglvnd` have since been upstreamed to the BCR and removed
+  from `modules/`.)
 - Every `metadata.json` has homepage, maintainers, repository and versions,
   and lists the version directory.
 - Every module has a `presubmit.yml`.
@@ -166,6 +168,6 @@ upstream with a minimal reproduction; remove the retry once fixed.
   modules are laid out for a direct copy into a BCR checkout, leaf-first:
   1. `capstone`, `ppqsort`, `md4c`, `base64`, `tidy-html5`, `usearch`,
      `wayland-protocols`;
-  2. `dbus`, `libglvnd`;
+  2. ~~`dbus`, `libglvnd`~~ (in the BCR since 2026-11-18);
   3. `nativefiledialog-extended`, `imgui` (per F3);
   4. `tracy`.
