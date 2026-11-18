@@ -114,6 +114,9 @@ workspace in a maintainable state, using what the Qt workspace learned in
    - sway's IPC socket path must fit in `sun_path`, so the headless test uses a
      short runtime folder.
    - Bazel `last_rc` on Windows: retry on exit code 36 (REVIEW F7).
-9. **BCR submission** (leaf-first order in REVIEW) waits on the maintainer:
-   - the go-ahead for an outward-facing action, and
-   - the `imgui` naming decision (REVIEW F3).
+9. **BCR submission: deferred by the maintainer (2026-11-17).** No BCR PRs
+   are filed yet, and `imgui` stays `1.93.0-docking.tracy.1` (REVIEW F3). The
+   modules are ready: green in this workspace's matrix and in the Consumer
+   workflow. The leaf-first order and the patches to send upstream are in
+   REVIEW F1 and F2. This exit criterion stays open until submission is
+   scheduled.

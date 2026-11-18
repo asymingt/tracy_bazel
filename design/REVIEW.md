@@ -89,6 +89,9 @@ BCR under the `imgui` name as-is. Options for upstreaming:
 
 Both require a maintainer decision before BCR submission.
 
+**Decision (2026-11-17):** leave it as-is for now; revisit when the BCR
+submission is scheduled.
+
 ### F4. Windows DLL naming with MinGW toolchains
 
 `cc_shared_library` names outputs `lib<name>.so` under the `@llvm` MinGW
