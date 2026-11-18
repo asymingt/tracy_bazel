@@ -109,8 +109,9 @@ have a desktop session. Add it in Phase 5 if it turns out to be stable.
     `memmem()` on `_WIN32`, not only `_MSC_VER`.
 - **Root-only workarounds for the MinGW toolchain**, both candidates to send to
   the BCR:
-  - `patches/curl/windows_mingw.patch`: `-D` instead of `/D`, plus `-l`
-    libraries next to `-DEFAULTLIB:`.
+  - `patches/curl/windows_mingw.patch`: `-D` instead of `/D`; system
+    libraries as `-DEFAULTLIB:` for MSVC-style compilers (`msvc-cl`,
+    `clang-cl`) and `-l` for MinGW, selected on the rules_cc compiler flag.
   - `-lpthread` on Windows: under MinGW, BCR BoringSSL uses winpthreads
     (`crypto/internal.h`), which the `@llvm` MinGW runtime ships as
     `libpthread.a`.

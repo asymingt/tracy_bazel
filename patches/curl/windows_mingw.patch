@@ -1,12 +1,48 @@
 Windows: build with MinGW (clang/gcc) toolchains as well as MSVC.
 
-- Spell defines -DFOO: cl.exe accepts both /D and -D, GNU-style drivers only -D.
-- Add -l<lib> next to -DEFAULTLIB:<lib>.lib; each linker ignores the other form.
+- Spell defines -DFOO: cl.exe and clang-cl accept both /D and -D, GNU-style
+  drivers only -D.
+- Link system libraries with -DEFAULTLIB:<lib>.lib for MSVC-style compilers
+  (msvc-cl, clang-cl) and -l<lib> otherwise (MinGW), chosen by the rules_cc
+  compiler flag rather than passing both forms.
 
 diff --git a/BUILD.bazel b/BUILD.bazel
 --- a/BUILD.bazel
 +++ b/BUILD.bazel
-@@ -321,14 +321,14 @@
+@@ -306,6 +306,32 @@
+     template = ":symbol_versioning_map_prefix",
+ )
+ 
++_WINDOWS_LIBS = [
++    "ws2_32",
++    "advapi32",
++    "crypt32",
++    "Normaliz",
++    "bcrypt",
++    "iphlpapi",
++    "secur32",
++]
++
++_WINDOWS_DEFAULTLIBS = ["-DEFAULTLIB:%s.lib" % lib for lib in _WINDOWS_LIBS]
++
++# Windows with an MSVC-style compiler driver. Each is a specialization of
++# @platforms//os:windows, so a select() can list both without ambiguity.
++config_setting(
++    name = "windows_msvc_cl",
++    constraint_values = ["@platforms//os:windows"],
++    flag_values = {"@rules_cc//cc/compiler:compiler": "msvc-cl"},
++)
++
++config_setting(
++    name = "windows_clang_cl",
++    constraint_values = ["@platforms//os:windows"],
++    flag_values = {"@rules_cc//cc/compiler:compiler": "clang-cl"},
++)
++
+ cc_library(
+     name = "curl_private_includes",
+     includes = ["lib"],
+@@ -321,14 +347,14 @@
      ]),
      copts = select({
          "@platforms//os:windows": [
@@ -29,18 +65,24 @@ diff --git a/BUILD.bazel b/BUILD.bazel
          ],
          "@platforms//os:macos": _BASE_CURL_COPTS,
          "@platforms//os:openbsd": _BASE_CURL_COPTS + [
-@@ -365,6 +365,14 @@
-             "-DEFAULTLIB:bcrypt.lib",
-             "-DEFAULTLIB:iphlpapi.lib",
-             "-DEFAULTLIB:secur32.lib",
-+            # MinGW toolchains ignore -DEFAULTLIB (and MSVC's linker ignores -l).
-+            "-lws2_32",
-+            "-ladvapi32",
-+            "-lcrypt32",
-+            "-lnormaliz",
-+            "-lbcrypt",
-+            "-liphlpapi",
-+            "-lsecur32",
-         ],
+@@ -357,15 +383,11 @@
+         "//conditions:default": [],
+     }) + select({
+         "@platforms//os:android": [],
+-        "@platforms//os:windows": [
+-            "-DEFAULTLIB:ws2_32.lib",
+-            "-DEFAULTLIB:advapi32.lib",
+-            "-DEFAULTLIB:crypt32.lib",
+-            "-DEFAULTLIB:Normaliz.lib",
+-            "-DEFAULTLIB:bcrypt.lib",
+-            "-DEFAULTLIB:iphlpapi.lib",
+-            "-DEFAULTLIB:secur32.lib",
+-        ],
++        # MSVC-style linkers (link.exe, lld-link) take -DEFAULTLIB:; GNU-style
++        # drivers (MinGW clang/gcc) take -l. Neither understands the other.
++        ":windows_msvc_cl": _WINDOWS_DEFAULTLIBS,
++        ":windows_clang_cl": _WINDOWS_DEFAULTLIBS,
++        "@platforms//os:windows": ["-l" + lib.lower() for lib in _WINDOWS_LIBS],
          "@platforms//os:macos": [
              "-Wl,-framework,SystemConfiguration",
+         ],
