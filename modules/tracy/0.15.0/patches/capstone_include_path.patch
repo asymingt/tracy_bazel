@@ -1,0 +1,27 @@
+Include Capstone by its installed path, <capstone/capstone.h>.
+
+Upstream CMake adds <includedir>/capstone to the include path (as capstone's
+pkg-config file does) and includes <capstone.h>. The capstone module only
+exposes the header at its install location, <capstone/capstone.h>.
+
+diff --git a/profiler/src/profiler/TracyDisassembly.cpp b/profiler/src/profiler/TracyDisassembly.cpp
+--- a/profiler/src/profiler/TracyDisassembly.cpp
++++ b/profiler/src/profiler/TracyDisassembly.cpp
+@@ -1,4 +1,4 @@
+-#include <capstone.h>
++#include <capstone/capstone.h>
+ #include <string.h>
+ 
+ #include "TracyDisassembly.hpp"
+diff --git a/server/TracyWorker.cpp b/server/TracyWorker.cpp
+--- a/server/TracyWorker.cpp
++++ b/server/TracyWorker.cpp
+@@ -22,7 +22,7 @@
+ #include <inttypes.h>
+ #include <sys/stat.h>
+ 
+-#include <capstone.h>
++#include <capstone/capstone.h>
+ 
+ #define ZDICT_STATIC_LINKING_ONLY
+ #include <zdict.h>

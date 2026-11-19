@@ -148,8 +148,8 @@ workspace, and each one also the `presubmit.yml` target:
 | `tidy-html5` | `5.8.0` | Library only, all localizations. Tracy's `tidy-cmake.patch` touches only CMake and is not needed. |
 | `usearch` | `2.26.4` | Header-only. No OpenMP or NumKong; software f16/bf16 on every compiler. Patch: `<Windows.h>` → `<windows.h>`, needed for cross-compiling from case-sensitive hosts. |
 | `wayland-protocols` | `1.50` | Exports every XML file, plus `wayland_protocol.bzl`'s `wayland_client_protocol()`. That macro runs `wayland-scanner` directly with input and output paths as arguments (no shell), and has `basename`/`header` overrides. |
-| `dbus` | `1.16.2` | Byte-identical copy from qt_bazel_workspace. |
-| `libglvnd` | `1.7.0` | Byte-identical copy from qt_bazel_workspace. |
+| `dbus` | `1.16.2` | Byte-identical copy from qt_bazel_workspace. Removed on 2026-11-18 once upstreamed; now from the BCR. |
+| `libglvnd` | `1.7.0` | Byte-identical copy from qt_bazel_workspace. Removed on 2026-11-18 once upstreamed; now from the BCR. |
 
 **imgui.** The module carries all six of Tracy's `cmake/imgui-*.patch` files.
 It is tracy-flavoured rather than a pristine BCR bump (the user's choice),

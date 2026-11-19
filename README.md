@@ -178,8 +178,10 @@ Not provided, because they need libraries this module does not package:
 | `tidy-html5` | 5.8.0 | GUI (LLM) | |
 | `usearch` | 2.26.4 | GUI (LLM) | header-only |
 | `wayland-protocols` | 1.50 | GUI, nfd | plus `wayland_client_protocol()` |
-| `dbus` | 1.16.2 | nfd | shared with qt_bazel_workspace |
-| `libglvnd` | 1.7.0 | GUI (Linux) | shared with qt_bazel_workspace |
+
+`dbus` 1.16.2 (nfd's xdg-portal backend) and `libglvnd` 1.7.0 (EGL/GL link
+stubs on Linux) used to live here too; they are now in the BCR and come from
+there.
 
 ## Toolchain notes
 

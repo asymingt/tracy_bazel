@@ -24,8 +24,10 @@ Follows the checklist from qt_bazel_workspace's `design/REVIEW.md`.
   - `base64`: BSD-2-Clause;
   - `tidy-html5`: HTMLTIDY;
   - `usearch`: Apache-2.0;
-  - `wayland-protocols`: MIT;
-  - `dbus` and `libglvnd`: as in qt_bazel_workspace.
+  - `wayland-protocols`: MIT.
+
+  (`dbus` and `libglvnd` have since been upstreamed to the BCR and removed
+  from `modules/`.)
 - Every `metadata.json` has homepage, maintainers, repository and versions,
   and lists the version directory.
 - Every module has a `presubmit.yml`.
@@ -53,7 +55,7 @@ should go to the BCR as fixes to the respective modules:
 
 | Root item | Module it works around | Upstream fix |
 | --- | --- | --- |
-| `patches/curl/windows_mingw.patch` | BCR `curl` uses `/D` defines and `-DEFAULTLIB:` only | Use `-D` (cl.exe accepts it) and add `-l` libs |
+| `patches/curl/windows_mingw.patch` | BCR `curl` uses `/D` defines and `-DEFAULTLIB:` only | Use `-D` (cl.exe accepts it); choose `-DEFAULTLIB:` for `msvc-cl`/`clang-cl` and `-l` otherwise via `config_setting`s on `@rules_cc//cc/compiler:compiler` (the patch is written to be sent as-is) |
 | `-lgdi32 -luser32 -lshell32` in `imgui//backends:platform-glfw` | BCR `glfw` links Win32 libs with `-DEFAULTLIB:` only | Same, in glfw |
 | `-lpthread` in `tracy//profiler` (Windows) | BCR `boringssl` uses pthreads under MinGW but never links them | `linkopts = ["-lpthread"]` for MinGW in boringssl |
 | `patches/llvm/windows_pkg_dir_symlinks.patch` | `@llvm`'s macOS SDK extraction on a Windows host leaves framework directory symlinks untraversable | Shared with qt_bazel_workspace; to send to `@llvm` |
@@ -166,6 +168,6 @@ upstream with a minimal reproduction; remove the retry once fixed.
   modules are laid out for a direct copy into a BCR checkout, leaf-first:
   1. `capstone`, `ppqsort`, `md4c`, `base64`, `tidy-html5`, `usearch`,
      `wayland-protocols`;
-  2. `dbus`, `libglvnd`;
+  2. ~~`dbus`, `libglvnd`~~ (in the BCR since 2026-11-18);
   3. `nativefiledialog-extended`, `imgui` (per F3);
   4. `tracy`.

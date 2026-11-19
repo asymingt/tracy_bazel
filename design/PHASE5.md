@@ -37,7 +37,8 @@ workspace in a maintainable state, using what the Qt workspace learned in
 7. **BCR submission, leaf-first:**
    1. `capstone`, `ppqsort`, `md4c`, `base64`, `tidy-html5`, `usearch`,
       `wayland-protocols`;
-   2. `dbus`, `libglvnd` (coordinated with the Qt workspace);
+   2. `dbus`, `libglvnd` (coordinated with the Qt workspace; done: both are in
+      the BCR and were removed from `modules/` on 2026-11-18);
    3. `nativefiledialog-extended`, `imgui` 1.93.0-docking bump,
       `glfw` 3.5.1 bump (if needed);
    4. `tracy` 0.15.0.

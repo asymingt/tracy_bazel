@@ -13,6 +13,7 @@
         "profiler/generated/tracy.md": "sha256-chP4L2SjpIn99NQFcz7tyZYPTcU1+Pc821Dvu4OyOYE="
     },
     "patches": {
+        "capstone_include_path.patch": "sha256-E6j8PVGMzllbmWQDJbWxQHks7kS8uI5MGuRSFikyaZ4=",
         "embed_include_basename.patch": "sha256-MBWpHxsQygs5L7krGi9UlxBRWDargWe2x/gTzGtnB+o=",
         "libcxx_atomic_shared_ptr.patch": "sha256-DcBkIZ8E5F+dwXpHxrg71paHBZLiJ/f+DTbTUh2biN8=",
         "mingw_arm64_cntvct.patch": "sha256-pDVh3CNIXtkr82Pb59uAMLXhZ+bnBmtYJfImODauSTU=",

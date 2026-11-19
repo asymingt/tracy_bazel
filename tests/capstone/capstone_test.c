@@ -1,10 +1,9 @@
 /* Disassemble known byte sequences for the two CPU families Tracy cares about
- * most, through both include spellings the module provides. */
+ * most, through the module's public header path. */
 
 #include <stdio.h>
 #include <string.h>
 
-#include <capstone.h>
 #include <capstone/capstone.h>
 
 static int check(cs_arch arch, cs_mode mode, const unsigned char* code, size_t size,
