@@ -3,7 +3,7 @@
     "strip_prefix": "tidy-html5-5.8.0",
     "url": "https://github.com/htacg/tidy-html5/archive/refs/tags/5.8.0.tar.gz",
     "overlay": {
-        "BUILD.bazel": "sha256-RfTRRXrZgEHd2ZKs+WYzdSIOWNwO4WaTpmi7JqXsp3Y=",
-        "MODULE.bazel": "sha256-7f9HAl8hHsQcm2qlKflW58kNiHB2d5SAMLvxkAy9blI="
+        "BUILD.bazel": "sha256-xJEAvA9ABZpFPXW09SWsW4IiVSxPMLjvs30z9foSrsk=",
+        "MODULE.bazel": "sha256-LvNsQK32L6tuQIiG+e9ZB4VQwtdFRxzuK6zMS0qSmTA="
     }
 }

@@ -7,8 +7,11 @@
         src = "@wayland-protocols//:stable/xdg-shell/xdg-shell.xml",
     )
 
-produces `xdg-shell-client-protocol.h` (include it by that bare name) and the
-matching private glue code, linked against @wayland//:wayland_client. Set
+produces `xdg-shell-client-protocol.h` (include it by that bare name, e.g.
+`#include <xdg-shell-client-protocol.h>`) and the matching glue code, linked
+against @wayland//:wayland_client. Only the generated header is exported (via
+strip_include_prefix), so the generated .c file and the directory holding it
+never land on a consumer's include path. Set
 `basename` to change the generated file names, e.g. basename =
 "wayland-xdg-shell" gives `wayland-xdg-shell-client-protocol.h` (the
 spelling ECM's ecm_add_wayland_client_protocol uses).
@@ -82,7 +85,7 @@ def wayland_client_protocol(name, src, basename = None, header = None, **kwargs)
         name = name,
         srcs = [code],
         hdrs = [header],
-        includes = [gen_dir],
+        strip_include_prefix = gen_dir,
         deps = [Label("@wayland//:wayland_client")],
         **kwargs
     )

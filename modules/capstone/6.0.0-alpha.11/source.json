@@ -1,9 +1,9 @@
 {
-    "integrity": "sha256-Y1vEVgl8PP5p2ii/6xlqXh0LdjGsyy3a980Ay1h5V7s=",
+    "integrity": "sha256-mIOjChORQsqqAWlLHLD14v7m8CnxDGAUCgP/FEbdyYg=",
     "strip_prefix": "capstone-6.0.0-Alpha11",
-    "url": "https://github.com/capstone-engine/capstone/archive/refs/tags/6.0.0-Alpha11.tar.gz",
+    "url": "https://github.com/capstone-engine/capstone/releases/download/6.0.0-Alpha11/capstone-6.0.0-Alpha11.tar.xz",
     "overlay": {
-        "BUILD.bazel": "sha256-+rq9h3XA2kxO/VrojkhtLk/KDH37gVGY8uZNFZ6jZa8=",
-        "MODULE.bazel": "sha256-q0Oel426MhJbsjvAAwNzMf9n6oOaMaIYzjOKls+sRkQ="
+        "BUILD.bazel": "sha256-13xLiR7djhJJvtewYQjNCBVYLBulKOrifoC2Mu57Q50=",
+        "MODULE.bazel": "sha256-yY+FO5V920iMP5rg6yvvrbQ0DShzkKI1pjB1UxYiJtw="
     }
 }
